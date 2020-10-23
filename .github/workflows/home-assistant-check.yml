@@ -17,7 +17,7 @@ jobs:
       - name: Getting config from Github
         uses: actions/checkout@v2
       - name: Copy stub files into config
-        run: cp -R ./.stubs/* ./; ls -la
+        run: cp -R ./.stubs/* ./
       - name: Home Assistant Version
         uses: "docker://homeassistant/home-assistant:stable"
         with:
@@ -27,4 +27,4 @@ jobs:
         uses: "docker://homeassistant/home-assistant:stable"
         with:
           args: |
-            python -m homeassistant --script check_config --info all
+            python -m homeassistant --config ./ --script check_config --info all
