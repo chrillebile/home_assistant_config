@@ -1,0 +1,42 @@
+### HomeAssistant ###
+# Files with personal details
+*.crt
+*.csr
+*.key
+.cloud/
+.google.token
+.uuid
+.ip_authenticated.yaml
+.spotify-token-cache
+.storage/
+icloud/
+google_calendars.yaml
+harmony_media_room.conf
+home-assistant.db
+home-assistant_v2.db
+home-assistant_v2.db-*
+html5_push_registrations.conf
+ip_bans.yaml
+known_devices.yaml
+phue.conf
+plex.conf
+pyozw.sqlite
+secrets.yaml
+tradfri.conf
+
+# Temporary files
+*.db-journal
+*.pid
+tts
+
+# automatically downloaded dependencies
+deps
+lib
+www
+
+# Log files
+home-assistant.log
+ozw_log.txt
+
+# Development files
+custom_components/

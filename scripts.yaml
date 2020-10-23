@@ -1,0 +1,83 @@
+'1577561631909':
+  alias: Blinking Light
+  sequence:
+  - data:
+      entity_id: input_boolean.blinking
+    service: input_boolean.turn_on
+  #- data:
+  #    entity_id: automation.day_light_ceiling_desk
+  #  service: automation.turn_off
+  #- data:
+  #    entity_id: automation.evening_light_ceiling_desk
+  #  service: automation.turn_off
+  - data:
+      brightness_pct: 80
+      entity_id: light.ceiling_desk
+    service: light.turn_on
+  - delay: '1'
+  - data:
+      entity_id: light.ceiling_desk
+    service: light.turn_off
+  - delay: '1'
+  - data:
+      brightness_pct: 80
+      entity_id: light.ceiling_desk
+    service: light.turn_on
+  - delay: '1'
+  - data:
+      entity_id: light.ceiling_desk
+    service: light.turn_off
+  - delay: '1'
+  - data:
+      brightness_pct: 80
+      entity_id: light.ceiling_desk
+    service: light.turn_on
+  - delay: '1'
+  #- data:
+  #    entity_id: automation.day_light_ceiling_desk
+  #  service: automation.turn_on
+  #- data:
+  #    entity_id: automation.evening_light_ceiling_desk
+  #  service: automation.turn_on
+  - data:
+      entity_id: input_boolean.blinking
+    service: input_boolean.turn_off
+'1577563891032':
+  alias: Blinking Light - On
+  sequence:
+  - data:
+      entity_id: script.1577561631909
+    service: script.1577561631909
+  - wait_template: '{{ is_state(''input_boolean.blinking'', ''off'') }}'
+  - data:
+      entity_id: light.ceiling_desk
+    service: light.turn_off
+  - data:
+      entity_id: light.ceiling_desk
+    service: light.turn_on
+'1577564199944':
+  alias: Blinking Light - Off
+  sequence:
+  - data:
+      entity_id: script.1577561631909
+    service: script.1577561631909
+  - wait_template: '{{ is_state(''input_boolean.blinking'', ''off'') }}'
+  - data:
+      entity_id: light.ceiling_desk
+    service: light.turn_off
+'1577565978977':
+  alias: Play Music
+  sequence:
+  - condition: state
+    entity_id: media_player.spotify_christian_bilevits
+    state: paused
+  - entity_id: media_player.spotify_christian_bilevits
+    service: media_player.media_play
+'1577566038402':
+  alias: Pause Music
+  sequence:
+  - condition: state
+    entity_id: media_player.spotify_christian_bilevits
+    state: playing
+  - entity_id: media_player.spotify_christian_bilevits
+    service: media_player.media_pause

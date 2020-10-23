@@ -1,0 +1,658 @@
+- id: '1577555518352'
+  alias: Turn off the lights when I leave home
+  description: ''
+  trigger:
+  - entity_id: person.christian
+    event: leave
+    platform: zone
+    zone: zone.home
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: leave
+  condition:
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  action:
+  - device_id: f9fa9ba3f6ea4cb496b6582a81a6baa0
+    domain: light
+    entity_id: light.floor
+    type: turn_off
+  - device_id: 97b31d0230c54afeb1bf6ecdbbb49922
+    domain: light
+    entity_id: light.bed
+    type: turn_off
+  - device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: turn_off
+  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    domain: light
+    entity_id: light.ceiling_sofa
+    type: turn_off
+  - device_id: ddcf63714c2a4c50be1e6a101708ec10
+    domain: light
+    entity_id: light.ceiling_bed
+    type: turn_off
+  - device_id: 1ea9c5fe27e04dd9a322f1efdf775b31
+    domain: light
+    entity_id: light.toilet
+    type: turn_off
+  - entity_id: input_boolean.been_home
+    service: input_boolean.turn_off
+  - data: {}
+    entity_id: media_player.living_room_speaker
+    service: media_player.media_stop
+  mode: single
+- id: '1577556917152'
+  alias: Night Light - Toilet
+  description: ''
+  trigger:
+  - entity_id: light.toilet
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition:
+  - after: '23:00'
+    before: 07:00
+    condition: time
+  action:
+  - data:
+      brightness_pct: 1
+      kelvin: 2262
+    entity_id: light.toilet
+    service: light.turn_on
+- id: '1577557004350'
+  alias: Day Light - Toilet
+  description: ''
+  trigger:
+  - entity_id: light.toilet
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition:
+  - after: 07:00
+    before: '23:00'
+    condition: time
+  action:
+  - data:
+      brightness_pct: 100
+      kelvin: 2747
+    entity_id: light.toilet
+    service: light.turn_on
+- id: '1577557540194'
+  alias: Day Light - Bed
+  description: ''
+  trigger:
+  - entity_id: light.bed
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    platform: state
+    to: above_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: above_horizon
+  - condition: device
+    device_id: 97b31d0230c54afeb1bf6ecdbbb49922
+    domain: light
+    entity_id: light.bed
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 80
+      kelvin: 2747
+    entity_id: light.bed
+    service: light.turn_on
+- id: '1577557812161'
+  alias: Day Light - Ceiling Bed
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_bed
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    platform: state
+    to: above_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: above_horizon
+  - condition: device
+    device_id: ddcf63714c2a4c50be1e6a101708ec10
+    domain: light
+    entity_id: light.ceiling_bed
+    type: is_on
+  action:
+  - alias: ''
+    data:
+      brightness_pct: 80
+      kelvin: 2747
+    entity_id: light.ceiling_bed
+    service: light.turn_on
+- id: '1577557981207'
+  alias: Day Light - Ceiling Desk
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_desk
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    platform: state
+    to: above_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: above_horizon
+  - condition: device
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 80
+      kelvin: 2747
+    entity_id: light.ceiling_desk
+    service: light.turn_on
+- id: '1577558045987'
+  alias: Day Light - Ceiling Sofa
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_sofa
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    platform: state
+    to: above_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: above_horizon
+  - condition: device
+    device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    domain: light
+    entity_id: light.ceiling_sofa
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 80
+      kelvin: 2747
+    entity_id: light.ceiling_sofa
+    service: light.turn_on
+- id: '1577558164243'
+  alias: Day Light - Floor
+  description: ''
+  trigger:
+  - entity_id: light.floor
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    platform: state
+    to: above_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: above_horizon
+  - condition: device
+    device_id: f9fa9ba3f6ea4cb496b6582a81a6baa0
+    domain: light
+    entity_id: light.floor
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 80
+      kelvin: 2747
+    entity_id: light.floor
+    service: light.turn_on
+- id: '1577558865243'
+  alias: Evening Light - Bed
+  description: ''
+  trigger:
+  - entity_id: light.bed
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    for: 00:30:00
+    platform: state
+    to: below_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: device
+    device_id: 97b31d0230c54afeb1bf6ecdbbb49922
+    domain: light
+    entity_id: light.bed
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 20
+      kelvin: 2262
+    entity_id: light.bed
+    service: light.turn_on
+- id: '1577559023541'
+  alias: Evening Light - Ceiling Bed
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_bed
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    for: 00:30:00
+    platform: state
+    to: below_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: device
+    device_id: ddcf63714c2a4c50be1e6a101708ec10
+    domain: light
+    entity_id: light.ceiling_bed
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 20
+      kelvin: 2262
+    entity_id: light.ceiling_bed
+    service: light.turn_on
+- id: '1577559157991'
+  alias: Evening Light - Ceiling Desk
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_desk
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    for: 00:30:00
+    platform: state
+    to: below_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: device
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 20
+      kelvin: 2262
+    entity_id: light.ceiling_desk
+    service: light.turn_on
+- id: '1577559248123'
+  alias: Evening Light - Ceiling Sofa
+  description: ''
+  trigger:
+  - entity_id: light.ceiling_sofa
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    for: 00:30:00
+    platform: state
+    to: below_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: device
+    device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    domain: light
+    entity_id: light.ceiling_sofa
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 20
+      kelvin: 2262
+    entity_id: light.ceiling_sofa
+    service: light.turn_on
+- id: '1577559329657'
+  alias: Evening Light - Floor
+  description: ''
+  trigger:
+  - entity_id: light.floor
+    from: 'off'
+    platform: state
+    to: 'on'
+  - entity_id: sun.sun
+    for: 00:30:00
+    platform: state
+    to: below_horizon
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: device
+    device_id: f9fa9ba3f6ea4cb496b6582a81a6baa0
+    domain: light
+    entity_id: light.floor
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 20
+      kelvin: 2262
+    entity_id: light.floor
+    service: light.turn_on
+- id: '1577559537875'
+  alias: Night Light - Bed
+  description: ''
+  trigger:
+  - entity_id: light.bed
+    from: 'off'
+    platform: state
+    to: 'on'
+  - event: sunset
+    offset: 03:00:00
+    platform: sun
+  condition:
+  - after: sunset
+    after_offset: 03:00:00
+    before: sunrise
+    condition: sun
+  - condition: device
+    device_id: 97b31d0230c54afeb1bf6ecdbbb49922
+    domain: light
+    entity_id: light.bed
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 10
+      kelvin: 2262
+    entity_id: light.bed
+    service: light.turn_on
+- id: '1577559693216'
+  alias: Night Off - Ceiling Bed
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  - platform: device
+    type: turned_on
+    device_id: ddcf63714c2a4c50be1e6a101708ec10
+    entity_id: light.ceiling_bed
+    domain: light
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  action:
+  - type: turn_off
+    device_id: ddcf63714c2a4c50be1e6a101708ec10
+    entity_id: light.ceiling_bed
+    domain: light
+  mode: single
+- id: '1577559802565'
+  alias: Night Off - Ceiling Desk
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  - platform: device
+    type: turned_on
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    entity_id: light.ceiling_desk
+    domain: light
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  action:
+  - type: turn_off
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    entity_id: light.ceiling_desk
+    domain: light
+  mode: single
+- id: '1577559873416'
+  alias: Night Off - Ceiling Sofa
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  - platform: device
+    type: turned_on
+    device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    entity_id: light.ceiling_sofa
+    domain: light
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.circadian_values
+    below: '-50'
+  action:
+  - type: turn_off
+    device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    entity_id: light.ceiling_sofa
+    domain: light
+  mode: single
+- id: '1577559937129'
+  alias: Night Light - Floor
+  description: ''
+  trigger:
+  - entity_id: light.floor
+    from: 'off'
+    platform: state
+    to: 'on'
+  - event: sunset
+    offset: 03:00:00
+    platform: sun
+  condition:
+  - after: sunset
+    after_offset: 03:00:00
+    before: sunrise
+    condition: sun
+  - condition: device
+    device_id: f9fa9ba3f6ea4cb496b6582a81a6baa0
+    domain: light
+    entity_id: light.floor
+    type: is_on
+  action:
+  - data:
+      brightness_pct: 10
+      kelvin: 2262
+    entity_id: light.floor
+    service: light.turn_on
+- id: '1577565166930'
+  alias: Ringing Blinking Light - On
+  description: ''
+  trigger:
+  - entity_id: sensor.in2023_phone_state
+    platform: state
+    to: ringing
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  - condition: device
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: is_on
+  action:
+  - entity_id: script.1577563891032
+    service: script.turn_on
+  mode: single
+- id: '1577565265648'
+  alias: Ringing Blinking Light - Off
+  description: ''
+  trigger:
+  - entity_id: sensor.in2023_phone_state
+    platform: state
+    to: ringing
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  - condition: device
+    device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: is_off
+  action:
+  - entity_id: script.1577564199944
+    service: script.turn_on
+  mode: single
+- id: '1577565666489'
+  alias: Home Lights On
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: enter
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: enter
+  condition:
+  - condition: state
+    entity_id: input_boolean.been_home
+    state: 'off'
+  action:
+  - data:
+      entity_id:
+      - light.bed
+      - light.ceiling_bed
+      - light.ceiling_desk
+      - light.ceiling_sofa
+      - light.floor
+    service: light.turn_on
+  - entity_id: input_boolean.been_home
+    service: input_boolean.turn_on
+  mode: single
+- id: '1577566232007'
+  alias: Play Music - Ring
+  description: ''
+  trigger:
+  - entity_id: sensor.in2023_phone_state
+    from: offhook
+    platform: state
+    to: idle
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  - condition: state
+    entity_id: media_player.spotify_christian_bilevits
+    state: paused
+  action:
+  - service: script.1577565978977
+  mode: single
+- id: '1577566320646'
+  alias: Pause Music - Ring
+  description: ''
+  trigger:
+  - entity_id: sensor.in2023_phone_state
+    platform: state
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  - condition: state
+    entity_id: media_player.spotify_christian_bilevits
+    state: playing
+  action:
+  - service: script.1577566038402
+  mode: single
+- id: '1585561512813'
+  alias: Auto turn off - Crapper
+  description: ''
+  trigger:
+  - entity_id: light.toilet
+    for: 00:30:00
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition:
+  - condition: device
+    device_id: 1ea9c5fe27e04dd9a322f1efdf775b31
+    domain: light
+    entity_id: light.toilet
+    for:
+      hours: 0
+      minutes: 30
+      seconds: 0
+    type: is_on
+  action:
+  - device_id: 1ea9c5fe27e04dd9a322f1efdf775b31
+    domain: light
+    entity_id: light.toilet
+    type: turn_off
+- id: '1585585858395'
+  alias: Turn off ceiling - Night
+  description: ''
+  trigger:
+  - below: '-50'
+    entity_id: sensor.circadian_values
+    for: 00:00:00
+    platform: numeric_state
+  - device_id: ddcf63714c2a4c50be1e6a101708ec10
+    domain: light
+    entity_id: light.ceiling_bed
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 1
+    platform: device
+    type: turned_on
+  - device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 1
+    platform: device
+    type: turned_on
+  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    domain: light
+    entity_id: light.ceiling_sofa
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 1
+    platform: device
+    type: turned_on
+  condition:
+  - below: '-50'
+    condition: numeric_state
+    entity_id: sensor.circadian_values
+  - condition: state
+    entity_id: switch.circadian_lighting_circadian_brightness
+    state: 'on'
+  action:
+  - device_id: ddcf63714c2a4c50be1e6a101708ec10
+    domain: light
+    entity_id: light.ceiling_bed
+    type: turn_off
+  - device_id: f6def5b1ec034a728acc95f4c119e782
+    domain: light
+    entity_id: light.ceiling_desk
+    type: turn_off
+  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
+    domain: light
+    entity_id: light.ceiling_sofa
+    type: turn_off
