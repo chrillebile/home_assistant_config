@@ -27,6 +27,4 @@ jobs:
         uses: "docker://homeassistant/home-assistant:stable"
         with:
           args: |
-            python -m homeassistant \
-              --script check_config \
-              --info all
+            python -m homeassistant --script check_config --info all
