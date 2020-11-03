@@ -1,0 +1,199 @@
+- id: '1604151544992'
+  name: Red Light District
+  entities:
+    light.bed:
+      brightness: 254
+      hs_color:
+      - 360
+      - 100
+      rgb_color:
+      - 255
+      - 0
+      - 0
+      xy_color:
+      - 0.701
+      - 0.299
+      friendly_name: Bed
+      supported_features: 49
+      state: 'on'
+    light.floor:
+      brightness: 254
+      hs_color:
+      - 360
+      - 100
+      rgb_color:
+      - 255
+      - 0
+      - 0
+      xy_color:
+      - 0.701
+      - 0.299
+      friendly_name: Floor
+      supported_features: 49
+      state: 'on'
+    light.toilet:
+      brightness: 254
+      hs_color:
+      - 360
+      - 100
+      rgb_color:
+      - 255
+      - 0
+      - 0
+      xy_color:
+      - 0.701
+      - 0.299
+      friendly_name: Toilet
+      supported_features: 49
+      state: 'on'
+    light.ceiling_bed:
+      friendly_name: Ceiling - Bed
+      supported_features: 33
+      state: 'off'
+    light.ceiling_desk:
+      friendly_name: Ceiling - Desk
+      supported_features: 33
+      state: 'off'
+    light.ceiling_sofa:
+      friendly_name: Ceiling - Sofa
+      supported_features: 33
+      state: 'off'
+    switch.circadian_lighting_circadian_brightness:
+      hs_color:
+      brightness:
+      friendly_name: Circadian Brightness
+      icon: mdi:theme-light-dark
+      state: 'off'
+    switch.circadian_lighting_circadian_colour:
+      hs_color:
+      brightness:
+      friendly_name: Circadian Colour
+      icon: mdi:theme-light-dark
+      state: 'off'
+    switch.led:
+      friendly_name: LED
+      state: 'on'
+    automation.night_light_toilet:
+      last_triggered: '2020-10-30T23:41:36.831834+00:00'
+      mode: single
+      current: 0
+      id: '1577556917152'
+      friendly_name: Night Light - Toilet
+      state: 'off'
+    automation.day_light_toilet:
+      last_triggered: '2020-10-31T16:37:56.859342+00:00'
+      mode: single
+      current: 0
+      id: '1577557004350'
+      friendly_name: Day Light - Toilet
+      state: 'off'
+    automation.auto_turn_off_crapper:
+      last_triggered: '2020-10-28T21:52:03.126314+00:00'
+      mode: single
+      current: 0
+      id: '1585561512813'
+      friendly_name: Auto turn off - Crapper
+      state: 'off'
+- id: '1604151830960'
+  name: Normal
+  entities:
+    light.bed:
+      brightness: 184
+      hs_color:
+      - 30.493
+      - 94.897
+      rgb_color:
+      - 255
+      - 135
+      - 13
+      xy_color:
+      - 0.6
+      - 0.381
+      friendly_name: Bed
+      supported_features: 49
+      state: 'on'
+    light.floor:
+      brightness: 254
+      hs_color:
+      - 30.493
+      - 94.897
+      rgb_color:
+      - 255
+      - 135
+      - 13
+      xy_color:
+      - 0.6
+      - 0.381
+      friendly_name: Floor
+      supported_features: 49
+      state: 'on'
+    light.ceiling_bed:
+      brightness: 184
+      friendly_name: Ceiling - Bed
+      supported_features: 33
+      state: 'on'
+    light.ceiling_desk:
+      brightness: 184
+      friendly_name: Ceiling - Desk
+      supported_features: 33
+      state: 'on'
+    light.ceiling_sofa:
+      brightness: 184
+      friendly_name: Ceiling - Sofa
+      supported_features: 33
+      state: 'on'
+    switch.led:
+      friendly_name: LED
+      state: 'off'
+    switch.circadian_lighting_circadian_brightness:
+      hs_color:
+      - 30.504
+      - 93.333
+      brightness: 72.56375281300132
+      friendly_name: Circadian Brightness
+      icon: mdi:theme-light-dark
+      state: 'on'
+    switch.circadian_lighting_circadian_colour:
+      hs_color:
+      - 30.504
+      - 93.333
+      brightness:
+      friendly_name: Circadian Colour
+      icon: mdi:theme-light-dark
+      state: 'on'
+    automation.night_light_toilet:
+      last_triggered: '2020-10-30T23:41:36.831834+00:00'
+      mode: single
+      current: 0
+      id: '1577556917152'
+      friendly_name: Night Light - Toilet
+      state: 'on'
+    automation.day_light_toilet:
+      last_triggered: '2020-10-31T16:40:31.352660+00:00'
+      mode: single
+      current: 0
+      id: '1577557004350'
+      friendly_name: Day Light - Toilet
+      state: 'on'
+    automation.auto_turn_off_crapper:
+      last_triggered: '2020-10-28T21:52:03.126314+00:00'
+      mode: single
+      current: 0
+      id: '1585561512813'
+      friendly_name: Auto turn off - Crapper
+      state: 'on'
+    light.toilet:
+      brightness: 254
+      hs_color:
+      - 28.29
+      - 64.241
+      rgb_color:
+      - 255
+      - 168
+      - 91
+      xy_color:
+      - 0.521
+      - 0.387
+      friendly_name: Toilet
+      supported_features: 49
+      state: 'on'
