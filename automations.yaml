@@ -278,6 +278,11 @@
   - condition: time
     after: 07:00
     before: '23:00'
+  - condition: device
+    type: is_on
+    device_id: be9974f111dc5798cffa01d41de08cff
+    entity_id: light.toilet
+    domain: light
   action:
   - service: light.turn_on
     data:
