@@ -4,12 +4,6 @@
   - data:
       entity_id: input_boolean.blinking
     service: input_boolean.turn_on
-  #- data:
-  #    entity_id: automation.day_light_ceiling_desk
-  #  service: automation.turn_off
-  #- data:
-  #    entity_id: automation.evening_light_ceiling_desk
-  #  service: automation.turn_off
   - data:
       brightness_pct: 80
       entity_id: light.ceiling_desk
@@ -33,12 +27,6 @@
       entity_id: light.ceiling_desk
     service: light.turn_on
   - delay: '1'
-  #- data:
-  #    entity_id: automation.day_light_ceiling_desk
-  #  service: automation.turn_on
-  #- data:
-  #    entity_id: automation.evening_light_ceiling_desk
-  #  service: automation.turn_on
   - data:
       entity_id: input_boolean.blinking
     service: input_boolean.turn_off
@@ -81,3 +69,15 @@
     state: playing
   - entity_id: media_player.spotify_christian_bilevits
     service: media_player.media_pause
+fade_light_deconz:
+  alias: Fade Light Deconz
+  sequence:
+  - service: deconz.configure
+    data:
+      entity: light.toilet_light
+      field: /state
+      data:
+        bri: '{{ brightness }}'
+        transitiontime: 15
+        xy: '{{ xy }}'
+  mode: single
