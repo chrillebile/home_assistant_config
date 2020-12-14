@@ -81,3 +81,13 @@ fade_light_deconz:
         transitiontime: 15
         xy: '{{ xy }}'
   mode: single
+welcome_home_christian:
+  alias: Welcome Home
+  sequence:
+  - delay: '3'
+  - service: tts.google_translate_say
+    entity_id: media_player.google_home
+    data:
+      message: Welcome home {{ name }}
+  mode: queued
+  max: 2

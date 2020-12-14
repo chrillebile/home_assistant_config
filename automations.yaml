@@ -159,26 +159,27 @@
   alias: Auto turn off - Crapper
   description: ''
   trigger:
-  - entity_id: light.toilet
-    for: 00:30:00
-    from: 'off'
-    platform: state
-    to: 'on'
-  condition:
-  - condition: device
-    device_id: 1ea9c5fe27e04dd9a322f1efdf775b31
-    domain: light
+  - platform: device
+    type: turned_on
+    device_id: be9974f111dc5798cffa01d41de08cff
     entity_id: light.toilet
+    domain: light
     for:
       hours: 0
       minutes: 30
       seconds: 0
+  condition:
+  - condition: device
     type: is_on
-  action:
-  - device_id: 1ea9c5fe27e04dd9a322f1efdf775b31
-    domain: light
+    device_id: be9974f111dc5798cffa01d41de08cff
     entity_id: light.toilet
-    type: turn_off
+    domain: light
+  action:
+  - type: turn_off
+    device_id: be9974f111dc5798cffa01d41de08cff
+    entity_id: light.toilet
+    domain: light
+  mode: single
 - id: '1585585858395'
   alias: Turn off ceiling - Night
   description: ''
@@ -243,7 +244,10 @@
     device_id: db06330462a9c0236cf4942a2bf2f843
     entity_id: binary_sensor.toilet_sensor
     domain: binary_sensor
-  condition: []
+  condition:
+  - condition: state
+    entity_id: input_boolean.toilet_manual
+    state: 'off'
   action:
   - choose:
     - conditions:
@@ -274,6 +278,10 @@
     device_id: db06330462a9c0236cf4942a2bf2f843
     entity_id: binary_sensor.toilet_sensor
     domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
   condition:
   - condition: time
     after: 07:00
@@ -283,6 +291,9 @@
     device_id: be9974f111dc5798cffa01d41de08cff
     entity_id: light.toilet
     domain: light
+  - condition: state
+    entity_id: input_boolean.toilet_manual
+    state: 'off'
   action:
   - service: light.turn_on
     data:
@@ -302,12 +313,92 @@
     domain: binary_sensor
     for:
       hours: 0
-      minutes: 2
+      minutes: 4
       seconds: 0
-  condition: []
+  condition:
+  - condition: state
+    entity_id: input_boolean.toilet_manual
+    state: 'off'
   action:
   - service: light.turn_off
     data:
       transition: 2
     entity_id: light.toilet
+  mode: single
+- id: '1606118844897'
+  alias: Toilet - Manual Trigger - On
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_on
+    device_id: be9974f111dc5798cffa01d41de08cff
+    entity_id: light.toilet
+    domain: light
+  condition:
+  - type: is_no_motion
+    condition: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.toilet_sensor
+    domain: binary_sensor
+  - condition: state
+    entity_id: input_boolean.toilet_manual
+    state: 'off'
+  action:
+  - service: input_boolean.turn_on
+    data: {}
+    entity_id: input_boolean.toilet_manual
+  - type: turn_on
+    device_id: be9974f111dc5798cffa01d41de08cff
+    entity_id: light.toilet
+    domain: light
+    brightness_pct: 100
+  mode: single
+- id: '1606119045624'
+  alias: Toilet - Manual Trigger - Off
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_off
+    device_id: be9974f111dc5798cffa01d41de08cff
+    entity_id: light.toilet
+    domain: light
+  condition:
+  - condition: state
+    entity_id: input_boolean.toilet_manual
+    state: 'on'
+  action:
+  - service: input_boolean.turn_off
+    data: {}
+    entity_id: input_boolean.toilet_manual
+  mode: single
+- id: '1607243658672'
+  alias: Welcome Home - Christian
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: enter
+  condition: []
+  action:
+  - delay: '60'
+  - service: script.welcome_home_christian
+    data:
+      name: Christian
+    entity_id: script.welcome_home_christian
+  mode: single
+- id: '1607244394687'
+  alias: Welcome Home - Felicia
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: enter
+  condition: []
+  action:
+  - delay: '60'
+  - service: script.welcome_home_christian
+    data:
+      name: Felicia
   mode: single
