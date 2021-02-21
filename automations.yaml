@@ -124,10 +124,10 @@
   alias: Play Music - Ring
   description: ''
   trigger:
-  - entity_id: sensor.in2023_phone_state
-    from: offhook
+  - from: offhook
     platform: state
     to: idle
+    entity_id: sensor.in2023_phone_state
   condition:
   - condition: zone
     entity_id: person.christian
@@ -142,9 +142,9 @@
   alias: Pause Music - Ring
   description: ''
   trigger:
-  - entity_id: sensor.in2023_phone_state
-    platform: state
+  - platform: state
     to: offhook
+    entity_id: sensor.in2023_phone_state
   condition:
   - condition: zone
     entity_id: person.christian
@@ -166,8 +166,9 @@
     domain: light
     for:
       hours: 0
-      minutes: 30
+      minutes: 45
       seconds: 0
+      milliseconds: 0
   condition:
   - condition: device
     type: is_on
@@ -280,7 +281,7 @@
     domain: binary_sensor
     for:
       hours: 0
-      minutes: 3
+      minutes: 4
       seconds: 0
   condition:
   - condition: time
@@ -313,7 +314,7 @@
     domain: binary_sensor
     for:
       hours: 0
-      minutes: 4
+      minutes: 5
       seconds: 0
   condition:
   - condition: state
@@ -334,6 +335,10 @@
     device_id: be9974f111dc5798cffa01d41de08cff
     entity_id: light.toilet
     domain: light
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
   condition:
   - type: is_no_motion
     condition: device
@@ -401,4 +406,75 @@
   - service: script.welcome_home_christian
     data:
       name: Felicia
+  mode: single
+- id: '1611609131335'
+  alias: Gaming - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: device_tracker.stadia_a2c2
+    to: home
+    from: not_home
+  condition: []
+  action:
+  - service: switch.turn_on
+    data: {}
+    entity_id: switch.led
+  mode: single
+- id: '1611609215573'
+  alias: Gaming - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: device_tracker.stadia_a2c2
+    from: home
+    to: not_home
+  condition: []
+  action:
+  - service: switch.turn_off
+    data: {}
+    entity_id: switch.led
+  mode: single
+- id: '1613827164291'
+  alias: Felicia Paus Music
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.felicia
+    zone: zone.home
+  - condition: device
+    device_id: e2218f1596be472186f459e1f173c07c
+    domain: media_player
+    entity_id: media_player.living_room_speaker
+    type: is_playing
+  action:
+  - service: media_player.media_pause
+    data: {}
+    entity_id: media_player.living_room_speaker
+  mode: single
+- id: '1613827263890'
+  alias: Felicia Play Music
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    from: offhook
+    to: idle
+  condition:
+  - condition: zone
+    entity_id: person.felicia
+    zone: zone.home
+  - condition: device
+    device_id: e2218f1596be472186f459e1f173c07c
+    domain: media_player
+    entity_id: media_player.living_room_speaker
+    type: is_paused
+  action:
+  - service: media_player.media_play
+    data: {}
+    entity_id: media_player.living_room_speaker
   mode: single

@@ -6,11 +6,6 @@ spotify:
   client_id: !secret spotify_client_id
   client_secret: !secret spotify_client_secret
 
-# Speedtest
-speedtestdotnet:
-  scan_interval:
-    minutes: 30
-
 # Text to speech
 tts:
   - platform: google_translate
@@ -56,15 +51,12 @@ switch:
     lights_rgb:
       - light.floor
       - light.bed
-    disable_brightness_adjust: true
   - platform: circadian_lighting
     name: Circadian Brightness
     lights_brightness:
       - light.ceiling_bed
       - light.ceiling_desk
       - light.ceiling_sofa
-      - light.floor
-      - light.bed
 
 frontend:
   themes: !include_dir_merge_named themes

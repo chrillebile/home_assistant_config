@@ -91,3 +91,11 @@ welcome_home_christian:
       message: Welcome home {{ name }}
   mode: queued
   max: 2
+all_lights_on:
+  alias: All lights on
+  sequence:
+  - service: light.turn_on
+    data:
+      entity_id: all
+      brightness_pct: 1
+  mode: single
