@@ -51,12 +51,37 @@ switch:
     lights_rgb:
       - light.floor
       - light.bed
+    lights_ct:
+      - light.ceiling_sink
+      - light.ceiling_microwave
+      - light.ceiling_toilet
+      - light.ceiling_bed
+      - light.ceiling_desk
+      - light.ceiling_window
   - platform: circadian_lighting
     name: Circadian Brightness
     lights_brightness:
+      - light.table
+
+light:
+  - platform: group
+    name: Kitchen Lights
+    entities:
+      - light.ceiling_microwave
+      - light.ceiling_sink
+      - light.ceiling_toilet
+  - platform: group
+    name: Living Room Lights
+    entities:
+      - light.floor
+      - light.table
+  - platform: group
+    name: Bedroom Lights
+    entities:
+      - light.bed
       - light.ceiling_bed
       - light.ceiling_desk
-      - light.ceiling_sofa
+      - light.ceiling_window
 
 frontend:
   themes: !include_dir_merge_named themes

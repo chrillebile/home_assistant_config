@@ -1,56 +1,43 @@
 - id: '1577555518352'
-  alias: Turn off the lights when I leave home
+  alias: Home - Off
   description: ''
   trigger:
-  - entity_id: person.christian
-    event: leave
-    platform: zone
-    zone: zone.home
-  - platform: zone
-    entity_id: person.felicia
-    zone: zone.home
-    event: leave
-  condition:
-  - condition: not
-    conditions:
-    - condition: zone
-      entity_id: person.christian
-      zone: zone.home
-  - condition: not
-    conditions:
-    - condition: zone
-      entity_id: person.felicia
-      zone: zone.home
+  - platform: state
+    entity_id: input_boolean.been_home
+    from: 'on'
+    to: 'off'
+  condition: []
   action:
-  - type: turn_off
-    device_id: 0ee8444f242672552cf4ad912c6a47a2
-    entity_id: light.floor
-    domain: light
-  - device_id: 97b31d0230c54afeb1bf6ecdbbb49922
-    domain: light
-    entity_id: light.bed
-    type: turn_off
-  - device_id: f6def5b1ec034a728acc95f4c119e782
-    domain: light
-    entity_id: light.ceiling_desk
-    type: turn_off
-  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
-    domain: light
-    entity_id: light.ceiling_sofa
-    type: turn_off
-  - device_id: ddcf63714c2a4c50be1e6a101708ec10
-    domain: light
-    entity_id: light.ceiling_bed
-    type: turn_off
-  - type: turn_off
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-  - entity_id: input_boolean.been_home
-    service: input_boolean.turn_off
-  - data: {}
-    entity_id: media_player.living_room_speaker
-    service: media_player.media_stop
+  - service: light.turn_off
+    target:
+      area_id:
+      - 14c52f1d72d94a29a745d0a400806c3a
+      - e4cd392f3436439681504b0610b28b1d
+      - 5c8d6d678e49498a9e77ff541ec6fad1
+  - service: media_player.turn_off
+    target:
+      area_id:
+      - 72f600fc787e479eaf6ce20ac1df415b
+      device_id:
+      - e2218f1596be472186f459e1f173c07c
+      - 45806b6577db034d108d0ef352480539
+      - 4bdf051aaa818b21fe2f85cdfc04629c
+  - service: switch.turn_off
+    target:
+      area_id: a13da43aa35f4548a72c6e44312a414a
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: media_player.living_room_tv
+        state: 'on'
+      sequence:
+      - service: media_player.turn_off
+        target:
+          device_id: 4f6d27b4523f3c8140647e69843d7b78
+    default: []
+  - service: media_player.media_stop
+    target:
+      entity_id: media_player.living_room
   mode: single
 - id: '1577565166930'
   alias: Ringing Blinking Light - On
@@ -93,32 +80,22 @@
     service: script.turn_on
   mode: single
 - id: '1577565666489'
-  alias: Home Lights On
+  alias: Home - On
   description: ''
   trigger:
-  - platform: zone
-    entity_id: person.christian
-    zone: zone.home
-    event: enter
-  - platform: zone
-    entity_id: person.felicia
-    zone: zone.home
-    event: enter
+  - platform: state
+    entity_id: input_boolean.been_home
+    from: 'off'
+    to: 'on'
   condition:
   - condition: state
-    entity_id: input_boolean.been_home
-    state: 'off'
+    entity_id: sun.sun
+    state: below_horizon
   action:
-  - data:
-      entity_id:
-      - light.bed
-      - light.ceiling_bed
-      - light.ceiling_desk
-      - light.ceiling_sofa
-      - light.floor
+  - data: {}
     service: light.turn_on
-  - entity_id: input_boolean.been_home
-    service: input_boolean.turn_on
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
   mode: single
 - id: '1577566232007'
   alias: Play Music - Ring
@@ -135,6 +112,9 @@
   - condition: state
     entity_id: media_player.spotify_christian_bilevits
     state: paused
+  - condition: state
+    entity_id: sensor.ac2003_telefonstatus
+    state: offhook
   action:
   - service: script.1577565978977
   mode: single
@@ -417,9 +397,25 @@
     from: not_home
   condition: []
   action:
-  - service: switch.turn_on
-    data: {}
-    entity_id: switch.led
+  - service: media_player.turn_on
+    target:
+      device_id: 4f6d27b4523f3c8140647e69843d7b78
+  - wait_for_trigger:
+    - platform: device
+      type: turned_on
+      device_id: 4f6d27b4523f3c8140647e69843d7b78
+      entity_id: remote.living_room_tv
+      domain: remote
+      for:
+        hours: 0
+        minutes: 0
+        seconds: 2
+        milliseconds: 0
+  - service: media_player.select_source
+    target:
+      device_id: 4f6d27b4523f3c8140647e69843d7b78
+    data:
+      source: HDMI 2
   mode: single
 - id: '1611609215573'
   alias: Gaming - Off
@@ -447,14 +443,15 @@
     entity_id: person.felicia
     zone: zone.home
   - condition: device
-    device_id: e2218f1596be472186f459e1f173c07c
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
     domain: media_player
-    entity_id: media_player.living_room_speaker
+    entity_id: media_player.living_room
     type: is_playing
   action:
   - service: media_player.media_pause
     data: {}
-    entity_id: media_player.living_room_speaker
+    target:
+      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
   mode: single
 - id: '1613827263890'
   alias: Felicia Play Music
@@ -469,12 +466,256 @@
     entity_id: person.felicia
     zone: zone.home
   - condition: device
-    device_id: e2218f1596be472186f459e1f173c07c
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
     domain: media_player
-    entity_id: media_player.living_room_speaker
+    entity_id: media_player.living_room
     type: is_paused
+  - condition: state
+    entity_id: sensor.in2023_phone_state
+    state: offhook
   action:
   - service: media_player.media_play
     data: {}
-    entity_id: media_player.living_room_speaker
+    target:
+      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+  mode: single
+- id: '1618177610102'
+  alias: Night Light - Stairs - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.stairs_sensor
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
+  action:
+  - service: switch.turn_off
+    target:
+      entity_id: switch.circadian_lighting_circadian_colour
+  - type: turn_on
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+    brightness_pct: 2
+  mode: single
+- id: '1618177885328'
+  alias: Night Light - Kitchen - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
+  action:
+  - service: switch.turn_off
+    target:
+      entity_id: switch.circadian_lighting_circadian_colour
+  - type: turn_on
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+    brightness_pct: 2
+  mode: single
+- id: '1618178644833'
+  alias: Night Light - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 6
+      seconds: 0
+      milliseconds: 0
+  condition:
+  - type: is_no_motion
+    condition: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+  - condition: numeric_state
+    attribute: brightness
+    above: '1'
+    below: '10'
+    entity_id: light.ceiling_toilet
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
+  action:
+  - type: turn_off
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - service: switch.turn_on
+    target:
+      entity_id: switch.circadian_lighting_circadian_colour
+  mode: single
+- id: '1618230174554'
+  alias: Night Mode - Toggle
+  description: ''
+  trigger:
+  - platform: time
+    at: '23:30'
+  - platform: time
+    at: 06:30
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: time
+        after: '23:29'
+        before: 06:29
+      sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.night_mode
+    default:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.night_mode
+  mode: single
+- id: '1618341675693'
+  alias: Been Home - On
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: enter
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: enter
+  condition: []
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.been_home
+  mode: single
+- id: '1618341855293'
+  alias: Been Home - Off
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: leave
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: leave
+  condition:
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.been_home
+  mode: single
+- id: '1618431144975'
+  alias: Kitchen - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+      milliseconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
+    data: {}
+  mode: single
+- id: '1618432744438'
+  alias: Kitchen - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
+  mode: single
+- id: '1618593947896'
+  alias: Burglar Alarm
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.stairs_sensor
+    domain: binary_sensor
+  condition:
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      title: ALERT - Burglar Alarm
+      message: Sensors detected motion!
+  - service: notify.mobile_app_ac2003
+    data:
+      title: ALERT - Burglar Alarm
+      message: Sensors detected motion!
   mode: single
