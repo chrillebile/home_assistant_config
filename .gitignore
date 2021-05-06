@@ -37,6 +37,8 @@ lib
 home-assistant.log
 ozw_log.txt
 
+aircast.xml
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

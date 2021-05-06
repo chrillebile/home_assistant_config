@@ -40,29 +40,6 @@ input_boolean:
     name: been_home_state
     initial: false
 
-circadian_lighting:
-  min_colortemp: 2000
-  max_colortemp: 3500
-  transition: 10
-
-switch:
-  - platform: circadian_lighting
-    name: Circadian Colour
-    lights_rgb:
-      - light.floor
-      - light.bed
-    lights_ct:
-      - light.ceiling_sink
-      - light.ceiling_microwave
-      - light.ceiling_toilet
-      - light.ceiling_bed
-      - light.ceiling_desk
-      - light.ceiling_window
-  - platform: circadian_lighting
-    name: Circadian Brightness
-    lights_brightness:
-      - light.table
-
 light:
   - platform: group
     name: Kitchen Lights

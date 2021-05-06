@@ -719,3 +719,33 @@
       title: ALERT - Burglar Alarm
       message: Sensors detected motion!
   mode: single
+- id: '1619886667783'
+  alias: Raspberry Health - Fan - On
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.processor_temperature
+    for: 00:01:00
+    above: '50'
+  condition: []
+  action:
+  - type: turn_on
+    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
+    entity_id: switch.fan
+    domain: switch
+  mode: single
+- id: '1619886740896'
+  alias: Raspberry Health - Fan - Off
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.processor_temperature
+    below: '40'
+    for: 00:01:00
+  condition: []
+  action:
+  - type: turn_off
+    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
+    entity_id: switch.fan
+    domain: switch
+  mode: single
