@@ -1,0 +1,7 @@
+---
+# Text-To-Speach
+#
+# https://www.home-assistant.io/integrations/google_translate/
+#
+tts:
+  - platform: google_translate

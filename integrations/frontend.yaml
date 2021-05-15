@@ -1,0 +1,7 @@
+---
+# This loads my Home Assistant frontend themes.
+#
+# https://www.home-assistant.io/integrations/frontend/
+#
+frontend:
+  themes: !include_dir_merge_named ../themes

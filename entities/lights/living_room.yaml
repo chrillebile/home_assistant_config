@@ -1,0 +1,10 @@
+---
+# Light group: Living Room
+#
+# https://www.home-assistant.io/integrations/light.group/
+#
+platform: group
+name: Living Room Lights
+entities:
+  - light.floor
+  - light.table

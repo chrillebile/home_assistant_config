@@ -3,7 +3,7 @@
   description: ''
   trigger:
   - platform: state
-    entity_id: input_boolean.been_home
+    entity_id: input_boolean.someone_home
     from: 'on'
     to: 'off'
   condition: []
@@ -39,52 +39,12 @@
     target:
       entity_id: media_player.living_room
   mode: single
-- id: '1577565166930'
-  alias: Ringing Blinking Light - On
-  description: ''
-  trigger:
-  - entity_id: sensor.in2023_phone_state
-    platform: state
-    to: ringing
-  condition:
-  - condition: zone
-    entity_id: person.christian
-    zone: zone.home
-  - condition: device
-    device_id: f6def5b1ec034a728acc95f4c119e782
-    domain: light
-    entity_id: light.ceiling_desk
-    type: is_on
-  action:
-  - entity_id: script.1577563891032
-    service: script.turn_on
-  mode: single
-- id: '1577565265648'
-  alias: Ringing Blinking Light - Off
-  description: ''
-  trigger:
-  - entity_id: sensor.in2023_phone_state
-    platform: state
-    to: ringing
-  condition:
-  - condition: zone
-    entity_id: person.christian
-    zone: zone.home
-  - condition: device
-    device_id: f6def5b1ec034a728acc95f4c119e782
-    domain: light
-    entity_id: light.ceiling_desk
-    type: is_off
-  action:
-  - entity_id: script.1577564199944
-    service: script.turn_on
-  mode: single
 - id: '1577565666489'
   alias: Home - On
   description: ''
   trigger:
   - platform: state
-    entity_id: input_boolean.been_home
+    entity_id: input_boolean.someone_home
     from: 'off'
     to: 'on'
   condition:
@@ -116,7 +76,9 @@
     entity_id: sensor.ac2003_telefonstatus
     state: offhook
   action:
-  - service: script.1577565978977
+  - service: media_player.media_play
+    target:
+      entity_id: media_player.spotify_christian_bilevits
   mode: single
 - id: '1577566320646'
   alias: Pause Music - Ring
@@ -133,259 +95,10 @@
     entity_id: media_player.spotify_christian_bilevits
     state: playing
   action:
-  - service: script.1577566038402
-  mode: single
-- id: '1585561512813'
-  alias: Auto turn off - Crapper
-  description: ''
-  trigger:
-  - platform: device
-    type: turned_on
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-    for:
-      hours: 0
-      minutes: 45
-      seconds: 0
-      milliseconds: 0
-  condition:
-  - condition: device
-    type: is_on
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-  action:
-  - type: turn_off
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-  mode: single
-- id: '1585585858395'
-  alias: Turn off ceiling - Night
-  description: ''
-  trigger:
-  - below: '-50'
-    entity_id: sensor.circadian_values
-    for: 00:00:00
-    platform: numeric_state
-  - device_id: ddcf63714c2a4c50be1e6a101708ec10
-    domain: light
-    entity_id: light.ceiling_bed
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 1
-    platform: device
-    type: turned_on
-  - device_id: f6def5b1ec034a728acc95f4c119e782
-    domain: light
-    entity_id: light.ceiling_desk
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 1
-    platform: device
-    type: turned_on
-  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
-    domain: light
-    entity_id: light.ceiling_sofa
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 1
-    platform: device
-    type: turned_on
-  condition:
-  - below: '-50'
-    condition: numeric_state
-    entity_id: sensor.circadian_values
-  - condition: state
-    entity_id: switch.circadian_lighting_circadian_brightness
-    state: 'on'
-  action:
-  - device_id: ddcf63714c2a4c50be1e6a101708ec10
-    domain: light
-    entity_id: light.ceiling_bed
-    type: turn_off
-  - device_id: f6def5b1ec034a728acc95f4c119e782
-    domain: light
-    entity_id: light.ceiling_desk
-    type: turn_off
-  - device_id: 6d1cf939784f4140b69a43dbcc6d077b
-    domain: light
-    entity_id: light.ceiling_sofa
-    type: turn_off
-- id: '1605973279828'
-  alias: Toilet - Sensor
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.toilet_sensor
-    domain: binary_sensor
-  condition:
-  - condition: state
-    entity_id: input_boolean.toilet_manual
-    state: 'off'
-  action:
-  - choose:
-    - conditions:
-      - condition: time
-        after: '23:00'
-        before: 07:00
-      sequence:
-      - service: light.turn_on
-        data:
-          kelvin: 2262
-          brightness_pct: 1
-          transition: 2
-        entity_id: light.toilet
-    default:
-    - service: light.turn_on
-      data:
-        kelvin: 2747
-        brightness_pct: 100
-        transition: 2
-      entity_id: light.toilet
-  mode: single
-- id: '1605973464792'
-  alias: Toilet - Sensor - Stopped
-  description: ''
-  trigger:
-  - type: no_motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.toilet_sensor
-    domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 4
-      seconds: 0
-  condition:
-  - condition: time
-    after: 07:00
-    before: '23:00'
-  - condition: device
-    type: is_on
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-  - condition: state
-    entity_id: input_boolean.toilet_manual
-    state: 'off'
-  action:
-  - service: light.turn_on
-    data:
-      kelvin: 2747
-      brightness_pct: 50
-      transition: 2
-    entity_id: light.toilet
-  mode: single
-- id: '1605973519068'
-  alias: Toilet - Sensor - Off
-  description: ''
-  trigger:
-  - type: no_motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.toilet_sensor
-    domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 5
-      seconds: 0
-  condition:
-  - condition: state
-    entity_id: input_boolean.toilet_manual
-    state: 'off'
-  action:
-  - service: light.turn_off
-    data:
-      transition: 2
-    entity_id: light.toilet
-  mode: single
-- id: '1606118844897'
-  alias: Toilet - Manual Trigger - On
-  description: ''
-  trigger:
-  - platform: device
-    type: turned_on
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 2
-  condition:
-  - type: is_no_motion
-    condition: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.toilet_sensor
-    domain: binary_sensor
-  - condition: state
-    entity_id: input_boolean.toilet_manual
-    state: 'off'
-  action:
-  - service: input_boolean.turn_on
-    data: {}
-    entity_id: input_boolean.toilet_manual
-  - type: turn_on
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-    brightness_pct: 100
-  mode: single
-- id: '1606119045624'
-  alias: Toilet - Manual Trigger - Off
-  description: ''
-  trigger:
-  - platform: device
-    type: turned_off
-    device_id: be9974f111dc5798cffa01d41de08cff
-    entity_id: light.toilet
-    domain: light
-  condition:
-  - condition: state
-    entity_id: input_boolean.toilet_manual
-    state: 'on'
-  action:
-  - service: input_boolean.turn_off
-    data: {}
-    entity_id: input_boolean.toilet_manual
-  mode: single
-- id: '1607243658672'
-  alias: Welcome Home - Christian
-  description: ''
-  trigger:
-  - platform: zone
-    entity_id: person.christian
-    zone: zone.home
-    event: enter
-  condition: []
-  action:
-  - delay: '60'
-  - service: script.welcome_home_christian
-    data:
-      name: Christian
-    entity_id: script.welcome_home_christian
-  mode: single
-- id: '1607244394687'
-  alias: Welcome Home - Felicia
-  description: ''
-  trigger:
-  - platform: zone
-    entity_id: person.felicia
-    zone: zone.home
-    event: enter
-  condition: []
-  action:
-  - delay: '60'
-  - service: script.welcome_home_christian
-    data:
-      name: Felicia
+  - service: media_player.media_pause
+    target:
+      entity_id:
+      - media_player.spotify_christian_bilevits
   mode: single
 - id: '1611609131335'
   alias: Gaming - On
@@ -416,20 +129,6 @@
       device_id: 4f6d27b4523f3c8140647e69843d7b78
     data:
       source: HDMI 2
-  mode: single
-- id: '1611609215573'
-  alias: Gaming - Off
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: device_tracker.stadia_a2c2
-    from: home
-    to: not_home
-  condition: []
-  action:
-  - service: switch.turn_off
-    data: {}
-    entity_id: switch.led
   mode: single
 - id: '1613827164291'
   alias: Felicia Paus Music
@@ -592,7 +291,7 @@
         entity_id: input_boolean.night_mode
   mode: single
 - id: '1618341675693'
-  alias: Been Home - On
+  alias: Someone Home - On
   description: ''
   trigger:
   - platform: zone
@@ -607,10 +306,10 @@
   action:
   - service: input_boolean.turn_on
     target:
-      entity_id: input_boolean.been_home
+      entity_id: input_boolean.someone_home
   mode: single
 - id: '1618341855293'
-  alias: Been Home - Off
+  alias: Someone Home - Off
   description: ''
   trigger:
   - platform: zone
@@ -635,7 +334,7 @@
   action:
   - service: input_boolean.turn_off
     target:
-      entity_id: input_boolean.been_home
+      entity_id: input_boolean.someone_home
   mode: single
 - id: '1618431144975'
   alias: Kitchen - Off

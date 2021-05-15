@@ -1,0 +1,8 @@
+---
+# This integration fetches data for varous helth products by Withings.
+#
+# https://www.home-assistant.io/integrations/withings/
+#
+withings:
+  client_id: !secret withings_consumer_id
+  client_secret: !secret withings_consumer_secret

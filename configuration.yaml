@@ -1,64 +1,9 @@
-# Configure a default setup of Home Assistant (frontend, api, etc)
-default_config:
-
-# Spotify
-spotify:
-  client_id: !secret spotify_client_id
-  client_secret: !secret spotify_client_secret
-
-# Text to speech
-tts:
-  - platform: google_translate
-
-# Withings
-withings:
-  client_id: !secret withings_consumer_id
-  client_secret: !secret withings_consumer_secret
-
-group: !include groups.yaml
-automation: !include automations.yaml
-script: !include scripts.yaml
-scene: !include scenes.yaml
-
-sensor:
-  - platform: systemmonitor
-    resources:
-      - type: disk_use_percent
-        arg: /
-      - type: memory_free
-      - type: processor_use
-      - type: processor_temperature
-      - type: network_out
-        arg: eth0
-      - type: last_boot
-
-input_boolean:
-  blinking:
-    name: blinking_state
-    initial: off
-  been_home:
-    name: been_home_state
-    initial: false
-
-light:
-  - platform: group
-    name: Kitchen Lights
-    entities:
-      - light.ceiling_microwave
-      - light.ceiling_sink
-      - light.ceiling_toilet
-  - platform: group
-    name: Living Room Lights
-    entities:
-      - light.floor
-      - light.table
-  - platform: group
-    name: Bedroom Lights
-    entities:
-      - light.bed
-      - light.ceiling_bed
-      - light.ceiling_desk
-      - light.ceiling_window
-
-frontend:
-  themes: !include_dir_merge_named themes
+---
+# This is my Home Assistant configuration!
+#
+# Trying to keep it modular and clean.
+#
+# This loads my configuration.
+#
+homeassistant:
+  packages: !include_dir_named integrations

@@ -1,0 +1,12 @@
+---
+# Light Group: Bedroom
+#
+# https://www.home-assistant.io/integrations/light.group/
+#
+platform: group
+name: Bedroom Lights
+entities:
+  - light.bed
+  - light.ceiling_bed
+  - light.ceiling_desk
+  - light.ceiling_window

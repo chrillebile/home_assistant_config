@@ -1,0 +1,7 @@
+---
+# This loads up my custom scripts.
+#
+# https://www.home-assistant.io/integrations/script/
+#
+script: !include ../scripts.yaml
+script split: !include_dir_named ../scripts
