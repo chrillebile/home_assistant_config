@@ -19,7 +19,6 @@
       area_id:
       - 72f600fc787e479eaf6ce20ac1df415b
       device_id:
-      - e2218f1596be472186f459e1f173c07c
       - 45806b6577db034d108d0ef352480539
       - 4bdf051aaa818b21fe2f85cdfc04629c
   - service: switch.turn_off
@@ -492,4 +491,28 @@
   - service: input_boolean.turn_on
     target:
       entity_id: input_boolean.sleep_mode
+  mode: single
+- id: '1621112502653'
+  alias: Theme Toggle
+  description: ''
+  trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id: sun.sun
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: sun.sun
+        state: above_horizon
+      sequence:
+      - service: frontend.set_theme
+        data:
+          name: Milky White
+    default:
+    - service: frontend.set_theme
+      data:
+        name: Kinda Dark
   mode: single
