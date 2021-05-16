@@ -10,6 +10,7 @@
 .spotify-token-cache
 .storage/
 icloud/
+image/
 google_calendars.yaml
 harmony_media_room.conf
 home-assistant.db
