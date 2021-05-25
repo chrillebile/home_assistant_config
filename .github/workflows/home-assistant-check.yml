@@ -21,21 +21,18 @@ jobs:
       - name: Run linting
         uses: frenck/action-yamllint@v1.0.1
 
-  home_assistant:
+  home-assistant:
+    name: "Home Assistant Configuration Check for version ${{ matrix.version }}"
+    # needs: [yamllint] // To be uncommented when yamllint is fixed
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        version: ["stable", "beta"]
     steps:
       - name: Getting config from Github
         uses: actions/checkout@v2
-      - name: Copy stub files into config
-        run: cp -R ./.stubs/* ./
-      - name: Home Assistant Version
-        uses: "docker://homeassistant/home-assistant:stable"
+      - name: Run Home Assistant Configuration Check
+        uses: frenck/action-home-assistant@v1.0.0
         with:
-          args: |
-            python -m homeassistant --version
-      - name: Home Assistant Check
-        uses: "docker://homeassistant/home-assistant:stable"
-        with:
-          args: |
-            python -m homeassistant --config ./ --script check_config --info all
+          secrets: ./.stubs/secrets.yaml
+          version: "${{ matrix.version }}"
