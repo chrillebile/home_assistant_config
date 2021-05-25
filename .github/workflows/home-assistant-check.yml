@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: ["stable", "beta"]
+        version: ["stable", "beta", "dev"]
     steps:
       - name: Getting config from Github
         uses: actions/checkout@v2
