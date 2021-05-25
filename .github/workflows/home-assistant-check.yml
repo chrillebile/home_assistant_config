@@ -1,3 +1,4 @@
+---
 name: Home Assistant Config CI
 
 # Controls when the action will run. Triggers the workflow on push or pull request
@@ -7,9 +8,19 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main, dev ]
+  schedule:
+    - cron: 0 18 * * *
 
 
 jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Getting config from Github
+        uses: actions/checkout@2
+      - name: Run linting
+        uses: frenck/action-yamllint@v1.0.1
+
   home_assistant:
     runs-on: ubuntu-latest
 
