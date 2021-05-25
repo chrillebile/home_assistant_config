@@ -13,17 +13,8 @@ on:
 
 
 jobs:
-  yamllint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Getting config from Github
-        uses: actions/checkout@v2
-      - name: Run linting
-        uses: frenck/action-yamllint@v1.0.1
-
   home-assistant:
     name: "Home Assistant Configuration Check for version ${{ matrix.version }}"
-    # needs: [yamllint] // To be uncommented when yamllint is fixed
     runs-on: ubuntu-latest
     strategy:
       matrix:
