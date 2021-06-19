@@ -32,8 +32,7 @@
       sequence:
       - service: media_player.turn_off
         target:
-          device_id:
-          - d545f28ac62c0ccbde8daa21a2ebe1c4
+          entity_id: media_player.living_room_tv
     default: []
   - service: media_player.media_stop
     target:
