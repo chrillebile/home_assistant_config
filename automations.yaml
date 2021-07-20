@@ -59,46 +59,55 @@
   alias: Play Music - Ring
   description: ''
   trigger:
-  - from: offhook
-    platform: state
-    to: idle
-    entity_id: sensor.in2023_phone_state
+  - platform: state
+    entity_id: input_boolean.in_call
+    from: 'on'
+    to: 'off'
   condition:
-  - condition: zone
-    entity_id: person.christian
-    zone: zone.home
   - condition: state
-    entity_id: media_player.spotify_christian_bilevits
-    state: paused
-  - condition: state
-    entity_id: sensor.ac2003_telefonstatus
-    state: offhook
+    entity_id: timer.music_dead
+    state: active
   action:
   - service: media_player.media_play
     target:
-      entity_id:
-      - media_player.spotify_christian_bilevits
+      entity_id: media_player.living_room
+  - service: timer.cancel
+    target:
+      entity_id: timer.music_dead
   mode: single
 - id: '1577566320646'
   alias: Pause Music - Ring
   description: ''
   trigger:
   - platform: state
-    to: offhook
-    entity_id: sensor.in2023_phone_state
+    entity_id: input_boolean.in_call
+    from: 'off'
+    to: 'on'
   condition:
-  - condition: zone
-    entity_id: person.christian
-    zone: zone.home
-  - condition: state
-    entity_id: media_player.spotify_christian_bilevits
-    state: playing
+  - condition: or
+    conditions:
+    - condition: device
+      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+      domain: media_player
+      entity_id: media_player.living_room
+      type: is_playing
+    - condition: device
+      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
+      domain: media_player
+      entity_id: media_player.43pus8505_12_3
+      type: is_playing
   action:
   - service: media_player.media_pause
     target:
-      entity_id:
-      - media_player.spotify_christian_bilevits
-      - media_player.living_room
+      entity_id: media_player.43pus8505_12_3
+  - condition: device
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.living_room
+    type: is_playing
+  - service: media_player.media_pause
+    target:
+      entity_id: media_player.living_room
   mode: single
 - id: '1611609131335'
   alias: Gaming - On
@@ -129,56 +138,6 @@
       source: HDMI 4
     target:
       device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
-  mode: single
-- id: '1613827164291'
-  alias: Felicia Paus Music
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: sensor.ac2003_telefonstatus
-    to: offhook
-  condition:
-  - condition: state
-    entity_id: person.felicia
-    state: home
-  - condition: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-    domain: media_player
-    entity_id: media_player.living_room
-    type: is_playing
-  action:
-  - service: media_player.media_pause
-    data: {}
-    target:
-      entity_id:
-      - media_player.living_room
-      - media_player.living_room_tv
-  mode: single
-- id: '1613827263890'
-  alias: Felicia Play Music
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: sensor.ac2003_telefonstatus
-    from: offhook
-    to: idle
-  condition:
-  - condition: state
-    entity_id: person.felicia
-    state: home
-  - condition: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-    domain: media_player
-    entity_id: media_player.living_room
-    type: is_paused
-  - condition: state
-    entity_id: sensor.in2023_phone_state
-    state: offhook
-  action:
-  - service: media_player.media_play
-    data: {}
-    target:
-      entity_id: media_player.living_room
   mode: single
 - id: '1618177610102'
   alias: Night Light - Stairs - On
@@ -442,7 +401,7 @@
   - platform: numeric_state
     entity_id: sensor.processor_temperature
     below: '40'
-    for: 00:01:00
+    for: 00:03:00
   condition: []
   action:
   - type: turn_off
@@ -525,27 +484,85 @@
   alias: Paus Music When TV starts playing
   description: ''
   trigger:
-  - platform: state
-    entity_id: media_player.living_room_tv
-    attribute: app_name
-    to: Telia Play
-  - platform: state
-    entity_id: media_player.living_room_tv
-    attribute: app_name
-    to: Netflix
-  condition:
-  - condition: device
-    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+  - platform: device
+    device_id: ade4535f6cc98c4d51c1a712eb9a73c1
     domain: media_player
-    entity_id: media_player.living_room_tv
-    type: is_on
-  - condition: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-    domain: media_player
-    entity_id: media_player.living_room
-    type: is_playing
+    entity_id: media_player.43pus8505_12_3
+    type: playing
+  condition: []
   action:
   - service: media_player.media_pause
     target:
       entity_id: media_player.living_room
+  mode: single
+- id: '1626800108204'
+  alias: In Call - Christian
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.in2023_phone_state
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.in_call
+  mode: single
+- id: '1626800322118'
+  alias: In Call - Felicia
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.felicia
+    zone: zone.home
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.in_call
+  mode: single
+- id: '1626800650469'
+  alias: Call Ended
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.in2023_phone_state
+    to: idle
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    to: idle
+  condition:
+  - condition: state
+    entity_id: sensor.ac2003_telefonstatus
+    state: idle
+  - condition: state
+    entity_id: sensor.in2023_phone_state
+    state: idle
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.in_call
+  mode: restart
+- id: '1626800823791'
+  alias: Music Paused
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.living_room
+    type: paused
+  condition: []
+  action:
+  - service: timer.start
+    data:
+      duration: '0'
+    target:
+      entity_id: timer.music_dead
   mode: single
