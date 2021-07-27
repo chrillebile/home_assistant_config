@@ -350,11 +350,21 @@
     device_id: db06330462a9c0236cf4942a2bf2f843
     entity_id: binary_sensor.kitchen_sensor
     domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 20
+      milliseconds: 0
   - type: motion
     platform: device
     device_id: 1676fc84015df0dfd79488157a70b6c1
     entity_id: binary_sensor.stairs_sensor
     domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 15
+      milliseconds: 0
   condition:
   - condition: not
     conditions:
