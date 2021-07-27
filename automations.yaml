@@ -54,6 +54,12 @@
     service: light.turn_on
     target:
       area_id: e4cd392f3436439681504b0610b28b1d
+  - condition: numeric_state
+    entity_id: sensor.temperature_11
+    above: '25'
+  - service: switch.turn_on
+    target:
+      entity_id: switch.office_fan
   mode: single
 - id: '1577566232007'
   alias: Play Music - Ring
