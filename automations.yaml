@@ -166,7 +166,7 @@
     device_id: ea02134afc6d69b0da1921c9af86bcb5
     entity_id: light.ceiling_toilet
     domain: light
-    brightness_pct: 0
+    brightness_pct: 1
   mode: single
 - id: '1618177885328'
   alias: Night Light - Kitchen - On
@@ -189,7 +189,7 @@
     device_id: ea02134afc6d69b0da1921c9af86bcb5
     entity_id: light.ceiling_toilet
     domain: light
-    brightness_pct: 0
+    brightness_pct: 1
   mode: single
 - id: '1618178644833'
   alias: Night Light - Off
@@ -330,11 +330,11 @@
     domain: binary_sensor
   condition:
   - condition: state
-    entity_id: sun.sun
-    state: below_horizon
-  - condition: state
     entity_id: input_boolean.night_mode
     state: 'off'
+  - condition: numeric_state
+    entity_id: sensor.lightlevel_kitchen
+    below: '25'
   action:
   - service: light.turn_on
     data: {}
@@ -573,4 +573,78 @@
       duration: '0'
     target:
       entity_id: timer.music_dead
+  mode: single
+- id: '1628365800846'
+  alias: Thunder
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_counter
+    above: '0'
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_distance
+    below: '12'
+  condition:
+  - type: is_value
+    condition: device
+    device_id: 4f8127b1447577de20bce9e23d178438
+    entity_id: sensor.blitzortung_lightning_distance
+    domain: sensor
+    below: 12
+  action:
+  - service: notify.mobile_app_ac2003
+    data:
+      message: Lightning ⚡ nearby, be ready to shut down technology.
+      title: ⚡⚡⚡
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Lightning ⚡ nearby
+      title: ⚡⚡⚡
+  mode: single
+- id: '1628614311230'
+  alias: Thunder - Light
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_distance
+    below: '5'
+  condition:
+  - condition: or
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  - condition: time
+    after: 09:00
+    before: '21:00'
+  action:
+  - service: light.turn_on
+    target:
+      area_id:
+      - 5c8d6d678e49498a9e77ff541ec6fad1
+      - e4cd392f3436439681504b0610b28b1d
+  mode: single
+- id: '1630519784855'
+  alias: Living Room Light - On
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.lightlevel_living_room
+    below: '25'
+    for: 00:01:00
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'on'
+  - condition: state
+    entity_id: light.living_room_lights
+    state: 'off'
+    for: 00:03:00
+  action:
+  - service: light.turn_on
+    target:
+      area_id: 5c8d6d678e49498a9e77ff541ec6fad1
   mode: single
