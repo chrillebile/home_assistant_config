@@ -11,18 +11,12 @@
   - service: light.turn_off
     target:
       area_id:
-      - 14c52f1d72d94a29a745d0a400806c3a
       - e4cd392f3436439681504b0610b28b1d
-      - 5c8d6d678e49498a9e77ff541ec6fad1
-  - service: media_player.turn_off
-    target:
-      area_id:
       - 72f600fc787e479eaf6ce20ac1df415b
-      device_id:
-      - 4bdf051aaa818b21fe2f85cdfc04629c
-  - service: switch.turn_off
+      device_id: 8fdaa9aca932ef82547f402169798bb9
+  - service: media_player.media_stop
     target:
-      area_id: a13da43aa35f4548a72c6e44312a414a
+      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
   - choose:
     - conditions:
       - condition: state
@@ -33,9 +27,6 @@
         target:
           entity_id: media_player.43pus8505_12_3
     default: []
-  - service: media_player.media_stop
-    target:
-      entity_id: media_player.living_room
   mode: single
 - id: '1577565666489'
   alias: Home - On
@@ -334,7 +325,7 @@
     state: 'off'
   - condition: numeric_state
     entity_id: sensor.lightlevel_kitchen
-    below: '25'
+    below: '50'
   action:
   - service: light.turn_on
     data: {}
@@ -633,8 +624,8 @@
   trigger:
   - platform: numeric_state
     entity_id: sensor.lightlevel_living_room
-    below: '25'
     for: 00:01:00
+    below: '100'
   condition:
   - condition: state
     entity_id: input_boolean.someone_home
@@ -646,5 +637,73 @@
   action:
   - service: light.turn_on
     target:
+      device_id:
+      - 0ee8444f242672552cf4ad912c6a47a2
+      - 5c330e59632549979130d36a55c2fe33
+  mode: single
+- id: '1631076332081'
+  alias: Living Room Light - Off
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.lightlevel_living_room
+    above: '1000'
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    target:
       area_id: 5c8d6d678e49498a9e77ff541ec6fad1
+  mode: single
+- id: '1631473233320'
+  alias: TV - Ambilight
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_on
+    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+    entity_id: light.living_room_tv
+    domain: light
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 10
+      milliseconds: 0
+  condition: []
+  action:
+  - service: light.turn_on
+    target:
+      entity_id: light.living_room_tv
+    data:
+      effect: 'FOLLOW_VIDEO: NATURAL'
+  mode: single
+- id: '1633528518401'
+  alias: '1540'
+  description: ''
+  trigger:
+  - platform: time
+    at: '15:40'
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  - condition: device
+    device_id: dbefae17fa5211ea9d1b49a619192941
+    domain: media_player
+    entity_id: media_player.spotify_christian_bilevits
+    type: is_playing
+  action:
+  - service: media_player.play_media
+    target:
+      entity_id: media_player.spotify_christian_bilevits
+    data:
+      media_content_id: https://open.spotify.com/track/6YtsAWXKFAVnl0Xyiv2ECb?si=892f978dfe144417
+      media_content_type: music
   mode: single
