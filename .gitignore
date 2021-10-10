@@ -35,7 +35,7 @@ deps
 lib
 
 # Log files
-home-assistant.log
+home-assistant.log*
 ozw_log.txt
 
 aircast.xml
