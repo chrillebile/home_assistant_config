@@ -10,10 +10,10 @@
   action:
   - service: light.turn_off
     target:
-      area_id:
-      - e4cd392f3436439681504b0610b28b1d
-      - 72f600fc787e479eaf6ce20ac1df415b
-      device_id: 8fdaa9aca932ef82547f402169798bb9
+      entity_id:
+      - light.kitchen_lights
+      - light.living_room_lights
+      - light.bedroom_lights
   - service: media_player.media_stop
     target:
       device_id: ade4535f6cc98c4d51c1a712eb9a73c1
@@ -239,6 +239,10 @@
     - service: input_boolean.turn_off
       target:
         entity_id: input_boolean.night_mode
+    - service: switch.turn_off
+      target:
+        entity_id:
+        - switch.adaptive_lighting_sleep_mode_kitchen
   mode: single
 - id: '1618341675693'
   alias: Someone Home - On
@@ -306,9 +310,9 @@
     state: 'off'
   action:
   - service: light.turn_off
+    data: {}
     target:
       area_id: e4cd392f3436439681504b0610b28b1d
-    data: {}
   mode: single
 - id: '1618432744438'
   alias: Kitchen - On
@@ -699,6 +703,9 @@
     domain: media_player
     entity_id: media_player.spotify_christian_bilevits
     type: is_playing
+  - condition: time
+    weekday:
+    - fri
   action:
   - service: media_player.play_media
     target:
