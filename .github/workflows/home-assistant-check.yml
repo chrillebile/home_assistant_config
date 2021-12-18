@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: ["stable", "beta", "dev"]
+        version: ["", "stable", "beta", "dev"] # Empty string to also run against current used version, specified in .HA_VERSION
     steps:
       - name: Getting config from Github
         uses: actions/checkout@v2
