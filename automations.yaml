@@ -1,550 +1,746 @@
----
-- id: "1577555518352"
+- id: '1577555518352'
   alias: Home - Off
-  description: ""
+  description: ''
   trigger:
-    - platform: state
-      entity_id: input_boolean.someone_home
-      from: "on"
-      to: "off"
+  - platform: state
+    entity_id: input_boolean.someone_home
+    from: 'on'
+    to: 'off'
   condition: []
   action:
-    - service: light.turn_off
-      target:
-        area_id:
-          - 14c52f1d72d94a29a745d0a400806c3a
-          - e4cd392f3436439681504b0610b28b1d
-          - 5c8d6d678e49498a9e77ff541ec6fad1
-    - service: media_player.turn_off
-      target:
-        area_id:
-          - 72f600fc787e479eaf6ce20ac1df415b
-        device_id:
-          - 45806b6577db034d108d0ef352480539
-          - 4bdf051aaa818b21fe2f85cdfc04629c
-    - service: switch.turn_off
-      target:
-        area_id: a13da43aa35f4548a72c6e44312a414a
-    - choose:
-        - conditions:
-            - condition: state
-              entity_id: media_player.living_room_tv
-              state: "on"
-          sequence:
-            - service: media_player.turn_off
-              target:
-                device_id:
-                  - d545f28ac62c0ccbde8daa21a2ebe1c4
-      default: []
-    - service: media_player.media_stop
-      target:
-        entity_id: media_player.living_room
+  - service: light.turn_off
+    target:
+      entity_id:
+      - light.kitchen_lights
+      - light.living_room_lights
+      - light.bedroom_lights
+  - service: media_player.media_stop
+    target:
+      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
+  - choose:
+    - conditions:
+      - condition: state
+        state: 'on'
+        entity_id: media_player.43pus8505_12_3
+      sequence:
+      - service: media_player.turn_off
+        target:
+          entity_id: media_player.43pus8505_12_3
+    default: []
   mode: single
-- id: "1577565666489"
+- id: '1577565666489'
   alias: Home - On
-  description: ""
+  description: ''
   trigger:
-    - platform: state
-      entity_id: input_boolean.someone_home
-      from: "off"
-      to: "on"
+  - platform: state
+    entity_id: input_boolean.someone_home
+    from: 'off'
+    to: 'on'
   condition:
-    - condition: state
-      entity_id: sun.sun
-      state: below_horizon
+  - condition: state
+    entity_id: sun.sun
+    state: below_horizon
   action:
-    - data: {}
-      service: light.turn_on
-      target:
-        area_id: e4cd392f3436439681504b0610b28b1d
+  - data: {}
+    service: light.turn_on
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
+  - condition: numeric_state
+    entity_id: sensor.lumi_lumi_weather_temperature
+    above: '25'
+  - service: switch.turn_on
+    target:
+      entity_id: switch.office_fan
   mode: single
-- id: "1577566232007"
+- id: '1577566232007'
   alias: Play Music - Ring
-  description: ""
+  description: ''
   trigger:
-    - from: offhook
-      platform: state
-      to: idle
-      entity_id: sensor.in2023_phone_state
+  - platform: state
+    entity_id: input_boolean.in_call
+    from: 'on'
+    to: 'off'
   condition:
-    - condition: zone
-      entity_id: person.christian
-      zone: zone.home
-    - condition: state
-      entity_id: media_player.spotify_christian_bilevits
-      state: paused
-    - condition: state
-      entity_id: sensor.ac2003_telefonstatus
-      state: offhook
+  - condition: state
+    entity_id: timer.music_dead
+    state: active
   action:
-    - service: media_player.media_play
-      target:
-        entity_id: media_player.spotify_christian_bilevits
+  - service: media_player.media_play
+    target:
+      entity_id: media_player.living_room
+  - service: timer.cancel
+    target:
+      entity_id: timer.music_dead
   mode: single
-- id: "1577566320646"
+- id: '1577566320646'
   alias: Pause Music - Ring
-  description: ""
+  description: ''
   trigger:
-    - platform: state
-      to: offhook
-      entity_id: sensor.in2023_phone_state
+  - platform: state
+    entity_id: input_boolean.in_call
+    from: 'off'
+    to: 'on'
   condition:
-    - condition: zone
-      entity_id: person.christian
-      zone: zone.home
-    - condition: state
-      entity_id: media_player.spotify_christian_bilevits
-      state: playing
-  action:
-    - service: media_player.media_pause
-      target:
-        entity_id:
-          - media_player.spotify_christian_bilevits
-  mode: single
-- id: "1611609131335"
-  alias: Gaming - On
-  description: ""
-  trigger:
-    - platform: state
-      entity_id: device_tracker.stadia_a2c2
-      to: home
-      from: not_home
-  condition: []
-  action:
-    - service: remote.turn_on
-      target:
-        entity_id: remote.living_room_remote
-    - wait_for_trigger:
-        - platform: device
-          device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
-          domain: media_player
-          entity_id: media_player.living_room_tv
-          type: turned_on
-          for:
-            hours: 0
-            minutes: 0
-            seconds: 3
-            milliseconds: 0
-    - service: media_player.select_source
-      data:
-        source: HDMI 4
-      target:
-        device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
-  mode: single
-- id: "1613827164291"
-  alias: Felicia Paus Music
-  description: ""
-  trigger:
-    - platform: state
-      entity_id: sensor.ac2003_telefonstatus
-      to: offhook
-  condition:
-    - condition: zone
-      entity_id: person.felicia
-      zone: zone.home
+  - condition: or
+    conditions:
     - condition: device
       device_id: 4bdf051aaa818b21fe2f85cdfc04629c
       domain: media_player
       entity_id: media_player.living_room
       type: is_playing
-  action:
-    - service: media_player.media_pause
-      data: {}
-      target:
-        device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-  mode: single
-- id: "1613827263890"
-  alias: Felicia Play Music
-  description: ""
-  trigger:
-    - platform: state
-      entity_id: sensor.ac2003_telefonstatus
-      from: offhook
-      to: idle
-  condition:
-    - condition: zone
-      entity_id: person.felicia
-      zone: zone.home
     - condition: device
-      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
       domain: media_player
+      entity_id: media_player.43pus8505_12_3
+      type: is_playing
+  action:
+  - service: media_player.media_pause
+    target:
+      entity_id: media_player.43pus8505_12_3
+  - condition: device
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.living_room
+    type: is_playing
+  - service: media_player.media_pause
+    target:
       entity_id: media_player.living_room
-      type: is_paused
-    - condition: state
-      entity_id: sensor.in2023_phone_state
-      state: offhook
-  action:
-    - service: media_player.media_play
-      data: {}
-      target:
-        device_id: 4bdf051aaa818b21fe2f85cdfc04629c
   mode: single
-- id: "1618177610102"
-  alias: Night Light - Stairs - On
-  description: ""
+- id: '1611609131335'
+  alias: Gaming - On
+  description: ''
   trigger:
-    - type: motion
-      platform: device
-      device_id: 1676fc84015df0dfd79488157a70b6c1
-      entity_id: binary_sensor.stairs_sensor
-      domain: binary_sensor
-  condition:
-    - condition: state
-      entity_id: input_boolean.night_mode
-      state: "on"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.adaptive_lighting_adapt_brightness_kitchen
-    - type: turn_on
-      device_id: ea02134afc6d69b0da1921c9af86bcb5
-      entity_id: light.ceiling_toilet
-      domain: light
-      brightness_pct: 2
-  mode: single
-- id: "1618177885328"
-  alias: Night Light - Kitchen - On
-  description: ""
-  trigger:
-    - type: motion
-      platform: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-  condition:
-    - condition: state
-      entity_id: input_boolean.night_mode
-      state: "on"
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id: switch.adaptive_lighting_adapt_brightness_kitchen
-    - type: turn_on
-      device_id: ea02134afc6d69b0da1921c9af86bcb5
-      entity_id: light.ceiling_toilet
-      domain: light
-      brightness_pct: 2
-  mode: single
-- id: "1618178644833"
-  alias: Night Light - Off
-  description: ""
-  trigger:
-    - type: no_motion
-      platform: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-      for:
-        hours: 0
-        minutes: 6
-        seconds: 0
-        milliseconds: 0
-  condition:
-    - type: is_no_motion
-      condition: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-    - condition: numeric_state
-      attribute: brightness
-      above: "1"
-      below: "10"
-      entity_id: light.ceiling_toilet
-    - condition: state
-      entity_id: input_boolean.night_mode
-      state: "on"
-  action:
-    - type: turn_off
-      device_id: ea02134afc6d69b0da1921c9af86bcb5
-      entity_id: light.ceiling_toilet
-      domain: light
-    - delay:
-        hours: 0
-        minutes: 0
-        seconds: 5
-        milliseconds: 0
-    - service: switch.turn_on
-      target:
-        entity_id: switch.adaptive_lighting_adapt_brightness_kitchen
-  mode: single
-- id: "1618230174554"
-  alias: Night Mode - Toggle
-  description: ""
-  trigger:
-    - platform: time
-      at: "23:30"
-    - platform: time
-      at: 06:30
+  - platform: state
+    entity_id: device_tracker.stadia_a2c2
+    to: home
+    from: not_home
   condition: []
   action:
-    - choose:
-        - conditions:
-            - condition: time
-              after: "23:29"
-              before: 06:29
-          sequence:
-            - service: input_boolean.turn_on
-              target:
-                entity_id: input_boolean.night_mode
-      default:
-        - service: input_boolean.turn_off
-          target:
-            entity_id: input_boolean.night_mode
-  mode: single
-- id: "1618341675693"
-  alias: Someone Home - On
-  description: ""
-  trigger:
-    - platform: zone
-      entity_id: person.christian
-      zone: zone.home
-      event: enter
-    - platform: zone
-      entity_id: person.felicia
-      zone: zone.home
-      event: enter
-  condition: []
-  action:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.someone_home
-  mode: single
-- id: "1618341855293"
-  alias: Someone Home - Off
-  description: ""
-  trigger:
-    - platform: zone
-      entity_id: person.christian
-      zone: zone.home
-      event: leave
-    - platform: zone
-      entity_id: person.felicia
-      zone: zone.home
-      event: leave
-  condition:
-    - condition: not
-      conditions:
-        - condition: zone
-          entity_id: person.christian
-          zone: zone.home
-    - condition: not
-      conditions:
-        - condition: zone
-          entity_id: person.felicia
-          zone: zone.home
-  action:
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.someone_home
-  mode: single
-- id: "1618431144975"
-  alias: Kitchen - Off
-  description: ""
-  trigger:
-    - type: no_motion
-      platform: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-      for:
-        hours: 0
-        minutes: 10
-        seconds: 0
-        milliseconds: 0
-  condition:
-    - condition: state
-      entity_id: input_boolean.guest_mode
-      state: "off"
-  action:
-    - service: light.turn_off
-      target:
-        area_id: e4cd392f3436439681504b0610b28b1d
-      data: {}
-  mode: single
-- id: "1618432744438"
-  alias: Kitchen - On
-  description: ""
-  trigger:
-    - type: motion
-      platform: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-  condition:
-    - condition: state
-      entity_id: sun.sun
-      state: below_horizon
-    - condition: state
-      entity_id: input_boolean.night_mode
-      state: "off"
-  action:
-    - service: light.turn_on
-      data: {}
-      target:
-        area_id: e4cd392f3436439681504b0610b28b1d
-  mode: single
-- id: "1618593947896"
-  alias: Burglar Alarm
-  description: ""
-  trigger:
-    - type: motion
-      platform: device
-      device_id: db06330462a9c0236cf4942a2bf2f843
-      entity_id: binary_sensor.kitchen_sensor
-      domain: binary_sensor
-    - type: motion
-      platform: device
-      device_id: 1676fc84015df0dfd79488157a70b6c1
-      entity_id: binary_sensor.stairs_sensor
-      domain: binary_sensor
-  condition:
-    - condition: not
-      conditions:
-        - condition: zone
-          entity_id: person.christian
-          zone: zone.home
-        - condition: zone
-          entity_id: person.felicia
-          zone: zone.home
-    - condition: state
-      entity_id: input_boolean.guest_mode
-      state: "off"
-  action:
-    - service: notify.mobile_app_oneplus_8pro_chrille
-      data:
-        title: ALERT - Burglar Alarm
-        message: Sensors detected motion!
-    - service: notify.mobile_app_ac2003
-      data:
-        title: ALERT - Burglar Alarm
-        message: Sensors detected motion!
-  mode: single
-- id: "1619886667783"
-  alias: Raspberry Health - Fan - On
-  description: ""
-  trigger:
-    - platform: numeric_state
-      entity_id: sensor.processor_temperature
-      for: 00:01:00
-      above: "50"
-  condition: []
-  action:
-    - type: turn_on
-      device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-      entity_id: switch.fan
-      domain: switch
-  mode: single
-- id: "1619886740896"
-  alias: Raspberry Health - Fan - Off
-  description: ""
-  trigger:
-    - platform: numeric_state
-      entity_id: sensor.processor_temperature
-      below: "40"
-      for: 00:01:00
-  condition: []
-  action:
-    - type: turn_off
-      device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-      entity_id: switch.fan
-      domain: switch
-  mode: single
-- id: "1620768571160"
-  alias: Sleep Mode - Off
-  description: ""
-  trigger:
-    - platform: time
-      at: 06:00
-    - platform: state
-      from: "on"
-      to: "off"
-      entity_id: input_boolean.sleep_mode
-    - platform: sun
-      event: sunrise
-  condition: []
-  action:
-    - service: switch.turn_off
-      target:
-        entity_id:
-          - switch.adaptive_lighting_sleep_mode_bedroom
-          - switch.adaptive_lighting_sleep_mode_kitchen
-          - switch.adaptive_lighting_sleep_mode_living_room
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.sleep_mode
-  mode: single
-- id: "1620768721762"
-  alias: Sleep Mode - On
-  description: ""
-  trigger:
-    - platform: state
-      from: "off"
-      to: "on"
-      entity_id: input_boolean.sleep_mode
-  condition:
-    - condition: time
-      after: "22:00"
-      before: 06:00
-  action:
-    - service: switch.turn_on
-      target:
-        entity_id:
-          - switch.adaptive_lighting_sleep_mode_kitchen
-          - switch.adaptive_lighting_sleep_mode_living_room
-          - switch.adaptive_lighting_sleep_mode_bedroom
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.sleep_mode
-  mode: single
-- id: "1621112502653"
-  alias: Theme Toggle
-  description: ""
-  trigger:
-    - platform: homeassistant
-      event: start
-    - platform: state
-      entity_id: sun.sun
-  condition: []
-  action:
-    - choose:
-        - conditions:
-            - condition: state
-              entity_id: sun.sun
-              state: above_horizon
-          sequence:
-            - service: frontend.set_theme
-              data:
-                name: Milky White
-      default:
-        - service: frontend.set_theme
-          data:
-            name: Kinda Dark
-  mode: single
-- id: "1621754049560"
-  alias: Paus Music When TV starts playing
-  description: ""
-  trigger:
-    - platform: state
-      entity_id: media_player.living_room_tv
-      attribute: app_name
-      to: Telia Play
-    - platform: state
-      entity_id: media_player.living_room_tv
-      attribute: app_name
-      to: Netflix
-  condition:
-    - condition: device
+  - service: remote.turn_on
+    target:
+      entity_id: remote.living_room_remote
+  - wait_for_trigger:
+    - platform: device
       device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
       domain: media_player
       entity_id: media_player.living_room_tv
-      type: is_on
-    - condition: device
-      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-      domain: media_player
-      entity_id: media_player.living_room
-      type: is_playing
+      type: turned_on
+      for:
+        hours: 0
+        minutes: 0
+        seconds: 3
+        milliseconds: 0
+  - service: media_player.select_source
+    data:
+      source: HDMI 4
+    target:
+      device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+  mode: single
+- id: '1618177610102'
+  alias: Night Light - Stairs - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.stair_sensor_on_off
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
   action:
-    - service: media_player.media_pause
+  - service: switch.turn_on
+    target:
+      entity_id: switch.adaptive_lighting_sleep_mode_kitchen
+  - type: turn_on
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+    brightness_pct: 1
+  mode: single
+- id: '1618177885328'
+  alias: Night Light - Kitchen - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
+  action:
+  - service: switch.turn_on
+    target:
+      entity_id: switch.adaptive_lighting_sleep_mode_kitchen
+  - type: turn_on
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+    brightness_pct: 1
+  mode: single
+- id: '1618178644833'
+  alias: Night Light - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 4
+      seconds: 0
+  condition:
+  - type: is_no_motion
+    condition: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+  - condition: numeric_state
+    attribute: brightness
+    above: '1'
+    below: '10'
+    entity_id: light.ceiling_toilet
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'on'
+  action:
+  - type: turn_off
+    device_id: ea02134afc6d69b0da1921c9af86bcb5
+    entity_id: light.ceiling_toilet
+    domain: light
+  mode: single
+- id: '1618230174554'
+  alias: Night Mode - Toggle
+  description: ''
+  trigger:
+  - platform: time
+    at: '23:30'
+  - platform: time
+    at: 06:30
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: time
+        after: '23:29'
+        before: 06:29
+      sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.night_mode
+    default:
+    - service: input_boolean.turn_off
       target:
-        entity_id: media_player.living_room
+        entity_id: input_boolean.night_mode
+    - service: switch.turn_off
+      target:
+        entity_id:
+        - switch.adaptive_lighting_sleep_mode_kitchen
+  mode: single
+- id: '1618341675693'
+  alias: Someone Home - On
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: enter
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: enter
+  condition: []
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.someone_home
+  mode: single
+- id: '1618341855293'
+  alias: Someone Home - Off
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.christian
+    zone: zone.home
+    event: leave
+  - platform: zone
+    entity_id: person.felicia
+    zone: zone.home
+    event: leave
+  condition:
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.someone_home
+  mode: single
+- id: '1618431144975'
+  alias: Kitchen - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 8
+      seconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
+  mode: single
+- id: '1618432744438'
+  alias: Kitchen - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  - condition: numeric_state
+    entity_id: sensor.lightlevel_kitchen_illuminance
+    below: '50'
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      area_id: e4cd392f3436439681504b0610b28b1d
+  mode: single
+- id: '1618593947896'
+  alias: Burglar Alarm
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.stair_sensor_on_off
+    domain: binary_sensor
+  condition:
+  - condition: not
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      title: ALERT - Burglar Alarm
+      message: Sensors detected motion!
+  - service: notify.mobile_app_ac2003
+    data:
+      title: ALERT - Burglar Alarm
+      message: Sensors detected motion!
+  - service: tts.cloud_say
+    data:
+      entity_id: media_player.living_room
+      message: You have been recorded
+      cache: true
+  mode: single
+- id: '1619886667783'
+  alias: Raspberry Health - Fan - On
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.processor_temperature
+    for: 00:01:00
+    above: '52'
+  condition: []
+  action:
+  - type: turn_on
+    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
+    entity_id: switch.rasp_fan_on_off
+    domain: switch
+  mode: single
+- id: '1619886740896'
+  alias: Raspberry Health - Fan - Off
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.processor_temperature
+    below: '40'
+    for: 00:03:00
+  condition: []
+  action:
+  - type: turn_off
+    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
+    entity_id: switch.rasp_fan_on_off
+    domain: switch
+  mode: single
+- id: '1620768571160'
+  alias: Sleep Mode - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: 06:00
+  - platform: state
+    from: 'on'
+    to: 'off'
+    entity_id: input_boolean.sleep_mode
+  - platform: sun
+    event: sunrise
+  condition: []
+  action:
+  - service: switch.turn_off
+    target:
+      entity_id:
+      - switch.adaptive_lighting_sleep_mode_bedroom
+      - switch.adaptive_lighting_sleep_mode_kitchen
+      - switch.adaptive_lighting_sleep_mode_living_room
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.sleep_mode
+  mode: single
+- id: '1620768721762'
+  alias: Sleep Mode - On
+  description: ''
+  trigger:
+  - platform: state
+    from: 'off'
+    to: 'on'
+    entity_id: input_boolean.sleep_mode
+  condition:
+  - condition: time
+    after: '22:00'
+    before: 06:00
+  action:
+  - service: switch.turn_on
+    target:
+      entity_id:
+      - switch.adaptive_lighting_sleep_mode_kitchen
+      - switch.adaptive_lighting_sleep_mode_living_room
+      - switch.adaptive_lighting_sleep_mode_bedroom
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.sleep_mode
+  mode: single
+- id: '1621112502653'
+  alias: Theme Toggle
+  description: ''
+  trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id: sun.sun
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: sun.sun
+        state: above_horizon
+      sequence:
+      - service: frontend.set_theme
+        data:
+          name: Milky White
+    default:
+    - service: frontend.set_theme
+      data:
+        name: Kinda Dark
+  mode: single
+- id: '1621754049560'
+  alias: Paus Music When TV starts playing
+  description: ''
+  trigger:
+  - platform: device
+    device_id: ade4535f6cc98c4d51c1a712eb9a73c1
+    domain: media_player
+    entity_id: media_player.43pus8505_12_3
+    type: playing
+  condition: []
+  action:
+  - service: media_player.media_pause
+    target:
+      entity_id: media_player.living_room
+  mode: single
+- id: '1626800108204'
+  alias: In Call - Christian
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.in2023_phone_state
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.christian
+    zone: zone.home
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.in_call
+  mode: single
+- id: '1626800322118'
+  alias: In Call - Felicia
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    to: offhook
+  condition:
+  - condition: zone
+    entity_id: person.felicia
+    zone: zone.home
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.in_call
+  mode: single
+- id: '1626800650469'
+  alias: Call Ended
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: sensor.in2023_phone_state
+    to: idle
+  - platform: state
+    entity_id: sensor.ac2003_telefonstatus
+    to: idle
+  condition:
+  - condition: state
+    entity_id: sensor.ac2003_telefonstatus
+    state: idle
+  - condition: state
+    entity_id: sensor.in2023_phone_state
+    state: idle
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.in_call
+  mode: restart
+- id: '1626800823791'
+  alias: Music Paused
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.living_room
+    type: paused
+  condition: []
+  action:
+  - service: timer.start
+    data:
+      duration: '0'
+    target:
+      entity_id: timer.music_dead
+  mode: single
+- id: '1628365800846'
+  alias: Thunder
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_counter
+    above: '0'
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_distance
+    below: '12'
+  condition:
+  - type: is_value
+    condition: device
+    device_id: 4f8127b1447577de20bce9e23d178438
+    entity_id: sensor.blitzortung_lightning_distance
+    domain: sensor
+    below: 12
+  action:
+  - service: notify.mobile_app_ac2003
+    data:
+      message: Lightning ⚡ nearby, be ready to shut down technology.
+      title: ⚡⚡⚡
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Lightning ⚡ nearby
+      title: ⚡⚡⚡
+  mode: single
+- id: '1628614311230'
+  alias: Thunder - Light
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.blitzortung_lightning_distance
+    below: '5'
+  condition:
+  - condition: or
+    conditions:
+    - condition: zone
+      entity_id: person.christian
+      zone: zone.home
+    - condition: zone
+      entity_id: person.felicia
+      zone: zone.home
+  - condition: time
+    after: 09:00
+    before: '21:00'
+  action:
+  - service: light.turn_on
+    target:
+      area_id:
+      - 5c8d6d678e49498a9e77ff541ec6fad1
+      - e4cd392f3436439681504b0610b28b1d
+  mode: single
+- id: '1630519784855'
+  alias: Living Room Light - On
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.lightlevel_living_room_illuminance
+    for: 00:01:00
+    below: '100'
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'on'
+  - condition: state
+    entity_id: light.living_room_lights
+    state: 'off'
+    for: 00:03:00
+  action:
+  - service: light.turn_on
+    target:
+      device_id:
+      - 0ee8444f242672552cf4ad912c6a47a2
+      - 5c330e59632549979130d36a55c2fe33
+  mode: single
+- id: '1631076332081'
+  alias: Living Room Light - Off
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.lightlevel_living_room_illuminance
+    above: '1000'
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    target:
+      area_id: 5c8d6d678e49498a9e77ff541ec6fad1
+  mode: single
+- id: '1631473233320'
+  alias: TV - Ambilight
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_on
+    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+    entity_id: light.living_room_tv
+    domain: light
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 10
+      milliseconds: 0
+  condition: []
+  action:
+  - service: light.turn_on
+    target:
+      entity_id: light.living_room_tv
+    data:
+      effect: 'FOLLOW_VIDEO: NATURAL'
+  mode: single
+- id: '1633528518401'
+  alias: '1540'
+  description: ''
+  trigger:
+  - platform: time
+    at: '15:40'
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  - condition: device
+    device_id: dbefae17fa5211ea9d1b49a619192941
+    domain: media_player
+    entity_id: media_player.spotify_christian_bilevits
+    type: is_playing
+  - condition: time
+    weekday:
+    - fri
+  action:
+  - service: media_player.play_media
+    target:
+      entity_id: media_player.spotify_christian_bilevits
+    data:
+      media_content_id: https://open.spotify.com/track/6YtsAWXKFAVnl0Xyiv2ECb?si=892f978dfe144417
+      media_content_type: music
+  mode: single
+- id: '1636612149882'
+  alias: Bovärd
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor_on_off
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'off'
+  action:
+  - service: switch.turn_off
+    target:
+      entity_id:
+      - switch.adaptive_lighting_adapt_brightness_kitchen
+      - switch.adaptive_lighting_adapt_brightness_living_room
+      - switch.adaptive_lighting_adapt_brightness_bedroom
+  - service: light.turn_on
+    target:
+      entity_id:
+      - light.kitchen_lights
+      - light.living_room_lights
+      - light.bedroom_lights
+    data:
+      brightness_pct: 100
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Bovärd där
+      title: BOVÄRD
+  - service: notify.mobile_app_ac2003
+    data:
+      message: Bovärd där
+      title: BOVÄRD
   mode: single
