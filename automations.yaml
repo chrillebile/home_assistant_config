@@ -46,7 +46,7 @@
     target:
       area_id: e4cd392f3436439681504b0610b28b1d
   - condition: numeric_state
-    entity_id: sensor.temperature_11
+    entity_id: sensor.lumi_lumi_weather_temperature
     above: '25'
   - service: switch.turn_on
     target:
@@ -143,7 +143,7 @@
   - type: motion
     platform: device
     device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.stairs_sensor
+    entity_id: binary_sensor.stair_sensor_on_off
     domain: binary_sensor
   condition:
   - condition: state
@@ -166,7 +166,7 @@
   - type: motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
   condition:
   - condition: state
@@ -189,18 +189,17 @@
   - type: no_motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
     for:
       hours: 0
       minutes: 6
       seconds: 0
-      milliseconds: 0
   condition:
   - type: is_no_motion
     condition: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
   - condition: numeric_state
     attribute: brightness
@@ -297,13 +296,12 @@
   - type: no_motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
     for:
       hours: 0
       minutes: 10
       seconds: 0
-      milliseconds: 0
   condition:
   - condition: state
     entity_id: input_boolean.guest_mode
@@ -321,14 +319,14 @@
   - type: motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
   condition:
   - condition: state
     entity_id: input_boolean.night_mode
     state: 'off'
   - condition: numeric_state
-    entity_id: sensor.lightlevel_kitchen
+    entity_id: sensor.lightlevel_kitchen_illuminance
     below: '50'
   action:
   - service: light.turn_on
@@ -343,23 +341,13 @@
   - type: motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 20
-      milliseconds: 0
   - type: motion
     platform: device
     device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.stairs_sensor
+    entity_id: binary_sensor.stair_sensor_on_off
     domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 15
-      milliseconds: 0
   condition:
   - condition: not
     conditions:
@@ -399,7 +387,7 @@
   action:
   - type: turn_on
     device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-    entity_id: switch.fan
+    entity_id: switch.rasp_fan_on_off
     domain: switch
   mode: single
 - id: '1619886740896'
@@ -414,7 +402,7 @@
   action:
   - type: turn_off
     device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-    entity_id: switch.fan
+    entity_id: switch.rasp_fan_on_off
     domain: switch
   mode: single
 - id: '1620768571160'
@@ -632,7 +620,7 @@
   description: ''
   trigger:
   - platform: numeric_state
-    entity_id: sensor.lightlevel_living_room
+    entity_id: sensor.lightlevel_living_room_illuminance
     for: 00:01:00
     below: '100'
   condition:
@@ -655,7 +643,7 @@
   description: ''
   trigger:
   - platform: numeric_state
-    entity_id: sensor.lightlevel_living_room
+    entity_id: sensor.lightlevel_living_room_illuminance
     above: '1000'
     for:
       hours: 0
@@ -726,7 +714,7 @@
   - type: motion
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor
+    entity_id: binary_sensor.kitchen_sensor_on_off
     domain: binary_sensor
   condition:
   - condition: state
