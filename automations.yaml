@@ -381,6 +381,11 @@
     data:
       title: ALERT - Burglar Alarm
       message: Sensors detected motion!
+  - service: tts.cloud_say
+    data:
+      entity_id: media_player.living_room
+      message: You have been recorded
+      cache: true
   mode: single
 - id: '1619886667783'
   alias: Raspberry Health - Fan - On
@@ -713,4 +718,41 @@
     data:
       media_content_id: https://open.spotify.com/track/6YtsAWXKFAVnl0Xyiv2ECb?si=892f978dfe144417
       media_content_type: music
+  mode: single
+- id: '1636612149882'
+  alias: Bovärd
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.kitchen_sensor
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'off'
+  action:
+  - service: switch.turn_off
+    target:
+      entity_id:
+      - switch.adaptive_lighting_adapt_brightness_kitchen
+      - switch.adaptive_lighting_adapt_brightness_living_room
+      - switch.adaptive_lighting_adapt_brightness_bedroom
+  - service: light.turn_on
+    target:
+      entity_id:
+      - light.kitchen_lights
+      - light.living_room_lights
+      - light.bedroom_lights
+    data:
+      brightness_pct: 100
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Bovärd där
+      title: BOVÄRD
+  - service: notify.mobile_app_ac2003
+    data:
+      message: Bovärd där
+      title: BOVÄRD
   mode: single
