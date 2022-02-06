@@ -1,2 +1,17 @@
----
-{}
+send_love:
+  alias: Send Love
+  sequence:
+  - service: notify.mobile_app_ac2003
+    data:
+      title: Kärlek till bae
+      message: Älskar dig, puss! ❤️
+  - condition: state
+    entity_id: light.bed
+    state: 'on'
+  - service: light.turn_on
+    target:
+      entity_id: light.bed
+    data:
+      color_name: red
+  mode: single
+  icon: mdi:hand-heart

@@ -93,18 +93,35 @@
       domain: media_player
       entity_id: media_player.43pus8505_12_3
       type: is_playing
+    - condition: device
+      device_id: dbefae17fa5211ea9d1b49a619192941
+      domain: media_player
+      entity_id: media_player.spotify_christian_bilevits
+      type: is_playing
   action:
   - service: media_player.media_pause
     target:
       entity_id: media_player.43pus8505_12_3
-  - condition: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-    domain: media_player
-    entity_id: media_player.living_room
-    type: is_playing
-  - service: media_player.media_pause
-    target:
-      entity_id: media_player.living_room
+  - choose:
+    - conditions:
+      - condition: device
+        device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+        domain: media_player
+        entity_id: media_player.living_room
+        type: is_playing
+      sequence:
+      - service: media_player.media_pause
+        target:
+          entity_id: media_player.living_room
+    - conditions:
+      - condition: zone
+        entity_id: person.christian
+        zone: zone.home
+      sequence:
+      - service: media_player.media_pause
+        target:
+          entity_id: media_player.spotify_christian_bilevits
+    default: []
   mode: single
 - id: '1611609131335'
   alias: Gaming - On
@@ -373,7 +390,6 @@
     data:
       entity_id: media_player.living_room
       message: You have been recorded
-      cache: true
   mode: single
 - id: '1619886667783'
   alias: Raspberry Health - Fan - On
