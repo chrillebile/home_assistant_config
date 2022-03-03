@@ -226,6 +226,9 @@
   - condition: state
     entity_id: input_boolean.night_mode
     state: 'on'
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
   action:
   - type: turn_off
     device_id: ea02134afc6d69b0da1921c9af86bcb5
@@ -497,15 +500,21 @@
   description: ''
   trigger:
   - platform: device
-    device_id: ade4535f6cc98c4d51c1a712eb9a73c1
+    device_id: 721ac7315641dc92fb9c19329f25812c
     domain: media_player
-    entity_id: media_player.43pus8505_12_3
+    entity_id: media_player.living_room_tv_3
     type: playing
-  condition: []
+  condition:
+  - condition: device
+    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.living_room
+    type: is_playing
   action:
   - service: media_player.media_pause
     target:
       entity_id: media_player.living_room
+    data: {}
   mode: single
 - id: '1626800108204'
   alias: In Call - Christian
