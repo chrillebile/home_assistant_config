@@ -769,3 +769,157 @@
       message: Bovärd där
       title: BOVÄRD
   mode: single
+- id: '1648585743231'
+  alias: Alarm - Triggered
+  description: ''
+  trigger:
+  - platform: mqtt
+    topic: frigate/events
+  condition:
+  - condition: state
+    entity_id: timer.larm_triggered
+    state: active
+  action:
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: A {{trigger.payload_json["after"]["label"]}} was detected.
+      data:
+        image: https://v0i0ebntx11uogid890nd1vnnqiwwe81.ui.nabu.casa/api/frigate/notifications/{{trigger.payload_json["after"]["id"]}}/thumbnail.jpg?format=android
+        tag: '{{trigger.payload_json["after"]["id"]}}'
+        when: '{{trigger.payload_json["after"]["start_time"]|int}}'
+  - service: notify.mobile_app_ac2003
+    data:
+      message: A {{trigger.payload_json["after"]["label"]}} was detected.
+      data:
+        image: https://v0i0ebntx11uogid890nd1vnnqiwwe81.ui.nabu.casa/api/frigate/notifications/{{trigger.payload_json["after"]["id"]}}/thumbnail.jpg?format=android
+        tag: '{{trigger.payload_json["after"]["id"]}}'
+        when: '{{trigger.payload_json["after"]["start_time"]|int}}'
+  mode: single
+- id: '1648729198501'
+  alias: Alarmo - Armed
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: armed_away
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: armed_home
+  condition: []
+  action:
+  - service: tapo_control.set_led_mode
+    data:
+      led_mode: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_alarm_mode
+    data:
+      alarm_mode: 'on'
+      sound: 'on'
+      light: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+- id: '1648729286615'
+  alias: Alarmo - Disarmed
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: disarmed
+  condition: []
+  action:
+  - service: tapo_control.set_alarm_mode
+    data:
+      alarm_mode: 'off'
+      sound: 'off'
+      light: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_motion_detection_mode
+    data:
+      motion_detection_mode: 'off'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - condition: state
+    entity_id: timer.larm_triggered
+    state: idle
+  - service: tapo_control.set_privacy_mode
+    data:
+      privacy_mode: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_led_mode
+    data:
+      led_mode: 'off'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+- id: '1648729657211'
+  alias: Alarmo - Arming
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: arming
+  condition: []
+  action:
+  - service: tapo_control.set_privacy_mode
+    data:
+      privacy_mode: 'off'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+- id: '1648743916464'
+  alias: Alarmo - Triggered
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: triggered
+  condition: []
+  action:
+  - service: timer.start
+    data: {}
+    target:
+      entity_id: timer.larm_triggered
+  - service: tapo_control.set_motion_detection_mode
+    data:
+      motion_detection_mode: normal
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+- id: '1648756998368'
+  alias: Alarm - Reminder
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: input_boolean.someone_home
+    from: 'on'
+    to: 'off'
+  condition:
+  - condition: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: is_disarmed
+  action:
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Do not forget to turn on the alarm
+      title: Alarm - Reminder
+  - service: notify.mobile_app_ac2003
+    data:
+      message: Do not forget to turn on the alarm
+      title: Alarm - Reminder
+  mode: single
