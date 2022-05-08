@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import datetime
+from datetime import date
 from typing import Optional
+
+from homeassistant.helpers.typing import StateType
 
 from ..helpers.const import *
 
@@ -6,7 +12,7 @@ from ..helpers.const import *
 class EntityData:
     unique_id: str
     name: str
-    state: int
+    state: StateType | date | datetime
     attributes: dict
     icon: str
     device_name: str

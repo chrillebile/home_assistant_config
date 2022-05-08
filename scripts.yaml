@@ -15,3 +15,43 @@ send_love:
       color_name: red
   mode: single
   icon: mdi:hand-heart
+camera_off:
+  alias: Camera - Off
+  sequence:
+  - service: tapo_control.set_privacy_mode
+    data:
+      privacy_mode: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_led_mode
+    data:
+      led_mode: 'off'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+  icon: mdi:cctv-off
+camera_on:
+  alias: Camera - On
+  sequence:
+  - service: tapo_control.set_led_mode
+    data:
+      led_mode: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_privacy_mode
+    data:
+      privacy_mode: 'off'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  mode: single
+  icon: mdi:cctv
+alarm_triggered_clear:
+  alias: Alarm Triggered - Clear
+  sequence:
+  - service: script.camera_off
+    data: {}
+  - service: timer.cancel
+    data: {}
+    target:
+      entity_id: timer.larm_triggered
+  mode: single

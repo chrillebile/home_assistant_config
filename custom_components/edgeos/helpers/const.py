@@ -43,13 +43,29 @@ SIGNALS = {
 
 EDGEOS_VERSION_INCOMPATIBLE = "v1"
 EDGEOS_VERSION_UNKNOWN = "N/A"
+EDGEOS_API_URL = "{}/api/edge/{}.json"
+EDGEOS_API_GET = "get"
+EDGEOS_API_DATA = "data"
+EDGEOS_API_HEARTBREAT = "heartbeat"
+
+GENERATE_DEBUG_FILE = "generate_debug_file"
 
 MANUFACTURER = "Ubiquiti"
 
-NOTIFICATION_ID = "edgeos_notification"
-NOTIFICATION_TITLE = "EdgeOS Setup"
-
 CLEAR_SUFFIX = "_clear"
+
+ATTR_KILO = "KBytes"
+ATTR_MEGA = "MBytes"
+ATTR_BYTE = "Bytes"
+ATTR_WEB_SOCKET_LAST_UPDATE = "WS Last Update"
+ATTR_WEB_SOCKET_MESSAGES_RECEIVED = "Messages Received"
+ATTR_WEB_SOCKET_MESSAGES_IGNORED = "Messages Ignored"
+ATTR_WEB_SOCKET_MESSAGES_HANDLED_PERCENTAGE = "Messages Handled"
+ATTR_API_LAST_UPDATE = "API Last Update"
+ATTR_UNKNOWN_DEVICES = "Unknown Devices"
+ATTR_SYSTEM_STATUS = "System Status"
+ATTR_ENABLED = "enabled"
+
 CONF_MONITORED_INTERFACES = "monitored_interfaces"
 CONF_MONITORED_INTERFACES_CLEAR = f"{CONF_MONITORED_INTERFACES}{CLEAR_SUFFIX}"
 CONF_MONITORED_DEVICES = "monitored_devices"
@@ -61,12 +77,8 @@ CONF_UPDATE_ENTITIES_INTERVAL = "update_entities_interval"
 CONF_UPDATE_API_INTERVAL = "update_api_interval"
 CONF_CLEAR_CREDENTIALS = "clear-credentials"
 CONF_ARR = [CONF_NAME, CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_UNIT]
-
-DROP_DOWNS_CONF = [
-    CONF_MONITORED_DEVICES,
-    CONF_MONITORED_INTERFACES,
-    CONF_TRACK_DEVICES,
-]
+CONF_LOG_LEVEL = "log_level"
+CONF_LOG_INCOMING_MESSAGES = "log_incoming_messages"
 
 ENTRY_PRIMARY_KEY = CONF_NAME
 
@@ -77,10 +89,7 @@ CONFIG_FLOW_INIT = "config_flow_init"
 API_URL_TEMPLATE = "https://{}"
 WEBSOCKET_URL_TEMPLATE = "wss://{}/ws/stats"
 
-EDGEOS_API_URL = "{}/api/edge/{}.json"
-EDGEOS_API_GET = "get"
-EDGEOS_API_DATA = "data"
-EDGEOS_API_HEARTBREAT = "heartbeat"
+
 
 COOKIE_PHPSESSID = "PHPSESSID"
 COOKIE_BEAKER_SESSION_ID = "beaker.session.id"
@@ -107,22 +116,19 @@ BYTE = 1
 KILO_BYTE = BYTE * 1024
 MEGA_BYTE = KILO_BYTE * 1024
 
-ATTR_KILO = "KBytes"
-ATTR_MEGA = "MBytes"
-ATTR_BYTE = "Bytes"
-
 INTERFACES_KEY = "interfaces"
 SYSTEM_STATS_KEY = "system-stats"
 EXPORT_KEY = "export"
 STATIC_DEVICES_KEY = "static-devices"
-DHCP_LEASES_KEY = "dhcp-leases"
 DHCP_STATS_KEY = "dhcp_stats"
-ROUTES_KEY = "routes"
 SYS_INFO_KEY = "sys_info"
-NUM_ROUTES_KEY = "num-routes"
-USERS_KEY = "users"
 DISCOVER_KEY = "discover"
 UNKNOWN_DEVICES_KEY = "unknown-devices"
+
+DHCP_LEASES_KEY = "dhcp-leases"
+ROUTES_KEY = "routes"
+NUM_ROUTES_KEY = "num-routes"
+USERS_KEY = "users"
 
 UPTIME = "uptime"
 IS_ALIVE = "is_alive"
@@ -149,8 +155,6 @@ MAC = "mac"
 CONNECTED = "Connected"
 LAST_ACTIVITY = "Last Activity"
 
-DEFAULT_USERNAME = "ubnt"
-
 RESPONSE_SUCCESS_KEY = "success"
 RESPONSE_ERROR_KEY = "error"
 RESPONSE_OUTPUT = "output"
@@ -165,15 +169,17 @@ WS_TOPIC_NAME = "name"
 WS_TOPIC_UNSUBSCRIBE = "UNSUBSCRIBE"
 WS_TOPIC_SUBSCRIBE = "SUBSCRIBE"
 WS_SESSION_ID = "SESSION_ID"
+WS_MESSAGE_COMPRESSION = 15
 
-ATTR_LAST_CHANGED = "Last Changed"
-ATTR_WEB_SOCKET_LAST_UPDATE = "WS Last Update"
-ATTR_API_LAST_UPDATE = "API Last Update"
-ATTR_UNKNOWN_DEVICES = "Unknown Devices"
+UNIT_PACKETS = "Packets"
+UNIT_TRAFFIC = "Traffic"
+UNIT_RATE = "Rate"
+UNIT_BPS = "bps"
+UNIT_BYTES = "bytes"
+UNIT_DROPPED_PACKETS = "Dropped"
+UNIT_DEVICES = "Devices"
 
 DEFAULT_DATE_FORMAT = "%x %X"
-
-EDGEOS_DATA_LOG = "edgeos_data.log"
 
 DOMAIN_LOGGER = "logger"
 SERVICE_SET_LEVEL = "set_level"
@@ -186,31 +192,45 @@ INTERFACES_MAIN_MAP = {
     "mac": {ATTR_NAME: "MAC"},
 }
 
+DEVICES_MAIN_MAP = {
+    LINK_CONNECTED: {ATTR_NAME: "Connected", ATTR_UNIT_OF_MEASUREMENT: "Connectivity"},
+    "ip": {ATTR_NAME: "Address"},
+    "mac": {ATTR_NAME: "MAC"},
+}
+
+STATS_DIRECTION = {
+    "rx": "Received",
+    "tx": "Sent"
+}
+
 INTERFACES_STATS_MAP = {
-    "rx_packets": {ATTR_NAME: "Packets (Received)"},
-    "tx_packets": {ATTR_NAME: "Packets (Sent)"},
-    "rx_bytes": {ATTR_NAME: "{} (Received)", ATTR_UNIT_OF_MEASUREMENT: "Bytes"},
-    "tx_bytes": {ATTR_NAME: "{} (Sent)", ATTR_UNIT_OF_MEASUREMENT: "Bytes"},
-    "rx_errors": {ATTR_NAME: "Errors (Received)"},
-    "tx_errors": {ATTR_NAME: "Errors (Sent)"},
-    "rx_dropped": {ATTR_NAME: "Dropped Packets (Received)"},
-    "tx_dropped": {ATTR_NAME: "Dropped Packets (Sent)"},
-    "rx_bps": {ATTR_NAME: "{}/ps (Received)", ATTR_UNIT_OF_MEASUREMENT: "Bps"},
-    "tx_bps": {ATTR_NAME: "{}/ps (Sent)", ATTR_UNIT_OF_MEASUREMENT: "Bps"},
-    "multicast": {ATTR_NAME: "Multicast"},
+    "rx_packets": SensorStateClass.TOTAL_INCREASING,
+    "tx_packets": SensorStateClass.TOTAL_INCREASING,
+    "rx_bytes": SensorStateClass.TOTAL_INCREASING,
+    "tx_bytes": SensorStateClass.TOTAL_INCREASING,
+    "rx_errors": SensorStateClass.TOTAL_INCREASING,
+    "tx_errors": SensorStateClass.TOTAL_INCREASING,
+    "rx_dropped": SensorStateClass.TOTAL_INCREASING,
+    "tx_dropped": SensorStateClass.TOTAL_INCREASING,
+    "rx_bps": SensorStateClass.MEASUREMENT,
+    "tx_bps": SensorStateClass.MEASUREMENT,
+    "multicast": SensorStateClass.TOTAL_INCREASING,
 }
 
 DEVICE_SERVICES_STATS_MAP = {
-    "rx_bytes": {ATTR_NAME: "{} (Received)", ATTR_UNIT_OF_MEASUREMENT: "Bytes"},
-    "tx_bytes": {ATTR_NAME: "{} (Sent)", ATTR_UNIT_OF_MEASUREMENT: "Bytes"},
-    "rx_rate": {ATTR_NAME: "{}/ps (Received)", ATTR_UNIT_OF_MEASUREMENT: "Bps"},
-    "tx_rate": {ATTR_NAME: "{}/ps (Sent)", ATTR_UNIT_OF_MEASUREMENT: "Bps"},
+    "rx_bytes": SensorStateClass.TOTAL_INCREASING,
+    "tx_bytes": SensorStateClass.TOTAL_INCREASING,
+    "rx_rate": SensorStateClass.MEASUREMENT,
+    "tx_rate": SensorStateClass.MEASUREMENT
+}
+
+STATS_MAPS = {
+    INTERFACES_KEY: INTERFACES_STATS_MAP,
+    STATIC_DEVICES_KEY: DEVICE_SERVICES_STATS_MAP
 }
 
 HEARTBEAT_INTERVAL_SECONDS = 30
-HEARTBEAT_INTERVAL = timedelta(seconds=30)
 SCAN_INTERVAL_WS_TIMEOUT = timedelta(seconds=60)
-SCAN_INTERVAL_API = timedelta(seconds=60)
 EMPTY_LAST_VALID = datetime.fromtimestamp(100000)
 
 MAX_MSG_SIZE = 0
@@ -222,18 +242,15 @@ BEGINS_WITH_SIX_DIGITS = "^([0-9]{1,6})"
 
 SENSOR_TYPE_INTERFACE = "Interface"
 SENSOR_TYPE_DEVICE = "Device"
-
-ATTR_SECONDS = "seconds"
-ATTR_SYSTEM_UPTIME = "System Uptime"
-ATTR_SYSTEM_STATUS = "System Status"
+SENSOR_TYPES = {
+    INTERFACES_KEY: SENSOR_TYPE_INTERFACE,
+    STATIC_DEVICES_KEY: SENSOR_TYPE_DEVICE
+}
 
 STRING_DASH = "-"
 STRING_UNDERSCORE = "_"
 STRING_COMMA = ","
 STRING_COLON = ":"
-
-CONF_SUPPORTED_DEVICES = "supported_devices"
-ATTR_ENABLED = "enabled"
 
 ERROR_SHUTDOWN = "Connector is closed."
 
@@ -249,18 +266,12 @@ ENTITY_SENSOR_DEVICE_CLASS = "sensor-device-class"
 ENTITY_SENSOR_STATE_CLASS = "sensor-state-class"
 
 ENTITY_STATUS = "entity-status"
-ENTITY_STATUS_EMPTY = None
 ENTITY_STATUS_READY = f"{ENTITY_STATUS}-ready"
 ENTITY_STATUS_CREATED = f"{ENTITY_STATUS}-created"
-ENTITY_STATUS_MODIFIED = f"{ENTITY_STATUS}-modified"
-ENTITY_STATUS_IGNORE = f"{ENTITY_STATUS}-ignore"
-ENTITY_STATUS_CANCELLED = f"{ENTITY_STATUS}-cancelled"
 
 ICONS = {SENSOR_TYPE_INTERFACE: "mdi:router-network", SENSOR_TYPE_DEVICE: "mdi:devices"}
 
 CONNECTED_ICONS = {True: "mdi:lan-connect", False: "mdi:lan-disconnect"}
-
-SERVICE_LOG_EVENTS_SCHEMA = vol.Schema({vol.Required(ATTR_ENABLED): cv.boolean})
 
 HTTP_ERRORS = {
     400: "incompatible_version",
@@ -269,15 +280,7 @@ HTTP_ERRORS = {
     500: "incompatible_version",
 }
 
-DOMAIN_LOAD = "load"
-DOMAIN_UNLOAD = "unload"
-
 DOMAIN_KEY_FILE = f"{DOMAIN}.key"
-
-CONF_LOG_LEVEL = "log_level"
-CONF_LOG_INCOMING_MESSAGES = "log_incoming_messages"
-
-CONF_STORE_DEBUG_FILE = "store_debug_file"
 
 LOG_LEVEL_DEFAULT = "Default"
 LOG_LEVEL_DEBUG = "Debug"

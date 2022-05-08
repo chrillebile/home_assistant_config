@@ -210,7 +210,7 @@ class EdgeOSData:
                 if unknown_devices_data is not None:
                     self.load_unknown_devices(unknown_devices_data)
 
-            self.update()
+            await self.update()
 
         except Exception as ex:
             exc_type, exc_obj, tb = sys.exc_info()
@@ -220,7 +220,7 @@ class EdgeOSData:
                 f"Failed to load devices data, Error: {ex}, Line: {line_number}"
             )
 
-    def update(self):
+    async def update(self):
         try:
             devices = self.get_devices()
             interfaces = self.get_interfaces()
@@ -242,6 +242,9 @@ class EdgeOSData:
                 SYSTEM_STATS_KEY: system_state,
                 ATTR_API_LAST_UPDATE: api_last_update,
                 ATTR_WEB_SOCKET_LAST_UPDATE: web_socket_last_update,
+                ATTR_WEB_SOCKET_MESSAGES_RECEIVED: self._ws.messages_received,
+                ATTR_WEB_SOCKET_MESSAGES_IGNORED: self._ws.messages_ignored,
+                ATTR_WEB_SOCKET_MESSAGES_HANDLED_PERCENTAGE: self._ws.messages_handled_percentage,
             }
 
             self._update_home_assistant()
@@ -251,7 +254,7 @@ class EdgeOSData:
 
             _LOGGER.error(f"Failed to refresh data, Error: {ex}, Line: {line_number}")
 
-    def ws_handler(self, payload=None):
+    async def ws_handler(self, payload=None):
         try:
             if payload is not None:
                 for key in payload:
@@ -265,7 +268,7 @@ class EdgeOSData:
                     else:
                         handler(data)
 
-                        self.update()
+                        await self.update()
         except Exception as ex:
             exc_type, exc_obj, tb = sys.exc_info()
             line_number = tb.tb_lineno

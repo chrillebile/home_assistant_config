@@ -6,6 +6,11 @@
     entity_id: input_boolean.someone_home
     from: 'on'
     to: 'off'
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: armed_away
   condition: []
   action:
   - service: light.turn_off
@@ -14,9 +19,13 @@
       - light.kitchen_lights
       - light.living_room_lights
       - light.bedroom_lights
+    data: {}
   - service: media_player.media_stop
     target:
-      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
+      device_id:
+      - ade4535f6cc98c4d51c1a712eb9a73c1
+      - 4bdf051aaa818b21fe2f85cdfc04629c
+    data: {}
   - choose:
     - conditions:
       - condition: state
@@ -26,6 +35,7 @@
       - service: media_player.turn_off
         target:
           entity_id: media_player.43pus8505_12_3
+        data: {}
     default: []
   mode: single
 - id: '1577565666489'
@@ -280,6 +290,24 @@
   - service: input_boolean.turn_on
     target:
       entity_id: input_boolean.someone_home
+    data: {}
+  - choose:
+    - conditions:
+      - condition: device
+        device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+        domain: alarm_control_panel
+        entity_id: alarm_control_panel.alarmo
+        type: is_armed_away
+      sequence:
+      - service: notify.mobile_app_oneplus_8pro_chrille
+        data:
+          message: Do not forget to turn off the alarm
+          title: Alarm - Reminder
+      - service: notify.mobile_app_ac2003
+        data:
+          message: Do not forget to turn off the alarm
+          title: Alarm - Reminder
+    default: []
   mode: single
 - id: '1618341855293'
   alias: Someone Home - Off
@@ -811,16 +839,16 @@
     type: armed_home
   condition: []
   action:
-  - service: tapo_control.set_led_mode
-    data:
-      led_mode: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
   - service: tapo_control.set_alarm_mode
     data:
       alarm_mode: 'on'
       sound: 'on'
       light: 'on'
+    target:
+      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: tapo_control.set_motion_detection_mode
+    data:
+      motion_detection_mode: normal
     target:
       device_id: 6af7a88d009637d36a125308d21def3a
   mode: single
@@ -850,16 +878,8 @@
   - condition: state
     entity_id: timer.larm_triggered
     state: idle
-  - service: tapo_control.set_privacy_mode
-    data:
-      privacy_mode: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
-  - service: tapo_control.set_led_mode
-    data:
-      led_mode: 'off'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: script.camera_off
+    data: {}
   mode: single
 - id: '1648729657211'
   alias: Alarmo - Arming
@@ -872,11 +892,8 @@
     type: arming
   condition: []
   action:
-  - service: tapo_control.set_privacy_mode
-    data:
-      privacy_mode: 'off'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - service: script.camera_on
+    data: {}
   mode: single
 - id: '1648743916464'
   alias: Alarmo - Triggered
@@ -893,11 +910,6 @@
     data: {}
     target:
       entity_id: timer.larm_triggered
-  - service: tapo_control.set_motion_detection_mode
-    data:
-      motion_detection_mode: normal
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
   mode: single
 - id: '1648756998368'
   alias: Alarm - Reminder
@@ -922,4 +934,49 @@
     data:
       message: Do not forget to turn on the alarm
       title: Alarm - Reminder
+  mode: single
+- id: '1651005399646'
+  alias: Air Quality - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: input_boolean.someone_home
+    to: 'on'
+    from: 'off'
+  condition: []
+  action:
+  - service: fan.set_preset_mode
+    data:
+      preset_mode: Auto
+    target:
+      entity_id: fan.tradfri_starkvind
+  mode: single
+- id: '1651005519623'
+  alias: Air Quality - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id: input_boolean.someone_home
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - device_id: 3f77bff2b8d810a66cdfdfb6fdee15d1
+    domain: fan
+    entity_id: fan.tradfri_starkvind
+    type: turn_off
+  mode: single
+- id: '1651132029158'
+  alias: Filter Warning
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.tradfri_starkvind_filter_time_left
+    below: '48'
+  condition: []
+  action:
+  - service: notify.mobile_app_oneplus_8pro_chrille
+    data:
+      message: Starkvind filter has less than 48 hours of usage left.
+      title: Starkvind Filter Warning
   mode: single
