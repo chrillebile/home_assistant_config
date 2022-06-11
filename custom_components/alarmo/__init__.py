@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     store = await async_get_registry(hass)
     coordinator = AlarmoCoordinator(hass, session, entry, store)
 
-    device_registry = await dr.async_get_registry(hass)
+    device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(const.DOMAIN, coordinator.id)},
@@ -325,14 +325,14 @@ class AlarmoCoordinator(DataUpdateCoordinator):
                 await alarm_entity.async_handle_arm_request(arm_mode, skip_code=True)
             elif action == const.EVENT_ACTION_DISARM:
                 _LOGGER.info("Received request for disarming")
-                await alarm_entity.async_alarm_disarm(None, True)
+                await alarm_entity.async_alarm_disarm(code=None, skip_code=True)
 
         self._subscriptions.append(
             self.hass.bus.async_listen(const.PUSH_EVENT, async_handle_push_event)
         )
 
     async def async_remove_entity(self, area_id: str):
-        entity_registry = await self.hass.helpers.entity_registry.async_get_registry()
+        entity_registry = self.hass.helpers.entity_registry.async_get(self.hass)
         if area_id == "master":
             entity = self.hass.data[const.DOMAIN]["master"]
             entity_registry.async_remove(entity.entity_id)

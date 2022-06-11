@@ -6,7 +6,6 @@
 platform: group
 name: Bedroom Lights
 entities:
-  - light.bed
-  - light.ceiling_bed
-  - light.ceiling_desk
-  - light.ceiling_window
+  - light.bed_christian
+  - light.bed_felicia
+  - light.ceiling_bedroom

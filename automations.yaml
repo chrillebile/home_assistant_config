@@ -14,12 +14,13 @@
   condition: []
   action:
   - service: light.turn_off
+    data: {}
     target:
+      area_id:
+      - a13da43aa35f4548a72c6e44312a414a
       entity_id:
-      - light.kitchen_lights
       - light.living_room_lights
       - light.bedroom_lights
-    data: {}
   - service: media_player.media_stop
     target:
       device_id:
@@ -96,7 +97,7 @@
     - condition: device
       device_id: 4bdf051aaa818b21fe2f85cdfc04629c
       domain: media_player
-      entity_id: media_player.living_room
+      entity_id: media_player.kitchen
       type: is_playing
     - condition: device
       device_id: ade4535f6cc98c4d51c1a712eb9a73c1
@@ -108,21 +109,35 @@
       domain: media_player
       entity_id: media_player.spotify_christian_bilevits
       type: is_playing
+    - condition: device
+      device_id: 2a385c19b25953b43dffe44880ff01ed
+      domain: media_player
+      entity_id: media_player.living_room
+      type: is_playing
   action:
   - service: media_player.media_pause
     target:
       entity_id: media_player.43pus8505_12_3
+    data: {}
   - choose:
     - conditions:
       - condition: device
         device_id: 4bdf051aaa818b21fe2f85cdfc04629c
         domain: media_player
+        entity_id: media_player.kitchen
+        type: is_playing
+      - condition: device
+        device_id: 2a385c19b25953b43dffe44880ff01ed
+        domain: media_player
         entity_id: media_player.living_room
         type: is_playing
       sequence:
       - service: media_player.media_pause
+        data: {}
         target:
-          entity_id: media_player.living_room
+          entity_id:
+          - media_player.kitchen
+          - media_player.living_room
     - conditions:
       - condition: zone
         entity_id: person.christian
@@ -131,37 +146,8 @@
       - service: media_player.media_pause
         target:
           entity_id: media_player.spotify_christian_bilevits
+        data: {}
     default: []
-  mode: single
-- id: '1611609131335'
-  alias: Gaming - On
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: device_tracker.stadia_a2c2
-    to: home
-    from: not_home
-  condition: []
-  action:
-  - service: remote.turn_on
-    target:
-      entity_id: remote.living_room_remote
-  - wait_for_trigger:
-    - platform: device
-      device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
-      domain: media_player
-      entity_id: media_player.living_room_tv
-      type: turned_on
-      for:
-        hours: 0
-        minutes: 0
-        seconds: 3
-        milliseconds: 0
-  - service: media_player.select_source
-    data:
-      source: HDMI 4
-    target:
-      device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
   mode: single
 - id: '1618177610102'
   alias: Night Light - Stairs - On
@@ -382,46 +368,6 @@
     target:
       area_id: e4cd392f3436439681504b0610b28b1d
   mode: single
-- id: '1618593947896'
-  alias: Burglar Alarm
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-  - type: motion
-    platform: device
-    device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.stair_sensor_on_off
-    domain: binary_sensor
-  condition:
-  - condition: not
-    conditions:
-    - condition: zone
-      entity_id: person.christian
-      zone: zone.home
-    - condition: zone
-      entity_id: person.felicia
-      zone: zone.home
-  - condition: state
-    entity_id: input_boolean.guest_mode
-    state: 'off'
-  action:
-  - service: notify.mobile_app_oneplus_8pro_chrille
-    data:
-      title: ALERT - Burglar Alarm
-      message: Sensors detected motion!
-  - service: notify.mobile_app_ac2003
-    data:
-      title: ALERT - Burglar Alarm
-      message: Sensors detected motion!
-  - service: tts.cloud_say
-    data:
-      entity_id: media_player.living_room
-      message: You have been recorded
-  mode: single
 - id: '1619886667783'
   alias: Raspberry Health - Fan - On
   description: ''
@@ -472,9 +418,13 @@
       - switch.adaptive_lighting_sleep_mode_bedroom
       - switch.adaptive_lighting_sleep_mode_kitchen
       - switch.adaptive_lighting_sleep_mode_living_room
+      - switch.adaptive_lighting_sleep_mode_office
+      - switch.adaptive_lighting_sleep_mode_closet
+    data: {}
   - service: input_boolean.turn_off
     target:
       entity_id: input_boolean.sleep_mode
+    data: {}
   mode: single
 - id: '1620768721762'
   alias: Sleep Mode - On
@@ -495,9 +445,13 @@
       - switch.adaptive_lighting_sleep_mode_kitchen
       - switch.adaptive_lighting_sleep_mode_living_room
       - switch.adaptive_lighting_sleep_mode_bedroom
+      - switch.adaptive_lighting_sleep_mode_office
+      - switch.adaptive_lighting_sleep_mode_closet
+    data: {}
   - service: input_boolean.turn_on
     target:
       entity_id: input_boolean.sleep_mode
+    data: {}
   mode: single
 - id: '1621112502653'
   alias: Theme Toggle
@@ -528,21 +482,21 @@
   description: ''
   trigger:
   - platform: device
-    device_id: 721ac7315641dc92fb9c19329f25812c
+    device_id: c3dcc3393fe94a50d84c25497fcdb6c4
     domain: media_player
-    entity_id: media_player.living_room_tv_3
+    entity_id: media_player.living_room_tv_gc
     type: playing
   condition:
   - condition: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    device_id: 2a385c19b25953b43dffe44880ff01ed
     domain: media_player
     entity_id: media_player.living_room
     type: is_playing
   action:
   - service: media_player.media_pause
+    data: {}
     target:
       entity_id: media_player.living_room
-    data: {}
   mode: single
 - id: '1626800108204'
   alias: In Call - Christian
@@ -604,6 +558,11 @@
   trigger:
   - platform: device
     device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    domain: media_player
+    entity_id: media_player.kitchen
+    type: paused
+  - platform: device
+    device_id: 2a385c19b25953b43dffe44880ff01ed
     domain: media_player
     entity_id: media_player.living_room
     type: paused
@@ -672,67 +631,68 @@
   alias: Living Room Light - On
   description: ''
   trigger:
-  - platform: numeric_state
+  - type: illuminance
+    platform: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
     entity_id: sensor.lightlevel_living_room_illuminance
-    for: 00:01:00
-    below: '100'
+    domain: sensor
+    below: 200
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_sensor_on_off
+    domain: binary_sensor
   condition:
   - condition: state
     entity_id: input_boolean.someone_home
     state: 'on'
+  - type: is_illuminance
+    condition: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.lightlevel_living_room_illuminance
+    domain: sensor
+    below: 200
   - condition: state
-    entity_id: light.living_room_lights
+    entity_id: input_boolean.sleep_mode
     state: 'off'
-    for: 00:03:00
   action:
   - service: light.turn_on
+    data: {}
     target:
-      device_id:
-      - 0ee8444f242672552cf4ad912c6a47a2
-      - 5c330e59632549979130d36a55c2fe33
+      entity_id: light.living_room_lights
   mode: single
 - id: '1631076332081'
   alias: Living Room Light - Off
   description: ''
   trigger:
-  - platform: numeric_state
+  - type: illuminance
+    platform: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
     entity_id: sensor.lightlevel_living_room_illuminance
-    above: '1000'
+    domain: sensor
+    above: 400
     for:
       hours: 0
       minutes: 1
       seconds: 0
-      milliseconds: 0
+  - type: no_motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_sensor_on_off
+    domain: binary_sensor
+    for:
+      hours: 2
+      minutes: 0
+      seconds: 0
   condition:
   - condition: state
     entity_id: input_boolean.guest_mode
     state: 'off'
   action:
   - service: light.turn_off
+    data: {}
     target:
-      area_id: 5c8d6d678e49498a9e77ff541ec6fad1
-  mode: single
-- id: '1631473233320'
-  alias: TV - Ambilight
-  description: ''
-  trigger:
-  - platform: device
-    type: turned_on
-    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
-    entity_id: light.living_room_tv
-    domain: light
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 10
-      milliseconds: 0
-  condition: []
-  action:
-  - service: light.turn_on
-    target:
-      entity_id: light.living_room_tv
-    data:
-      effect: 'FOLLOW_VIDEO: NATURAL'
+      entity_id: light.living_room_lights
   mode: single
 - id: '1633528518401'
   alias: '1540'
@@ -759,43 +719,6 @@
     data:
       media_content_id: https://open.spotify.com/track/6YtsAWXKFAVnl0Xyiv2ECb?si=892f978dfe144417
       media_content_type: music
-  mode: single
-- id: '1636612149882'
-  alias: Bovärd
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-  condition:
-  - condition: state
-    entity_id: input_boolean.someone_home
-    state: 'off'
-  action:
-  - service: switch.turn_off
-    target:
-      entity_id:
-      - switch.adaptive_lighting_adapt_brightness_kitchen
-      - switch.adaptive_lighting_adapt_brightness_living_room
-      - switch.adaptive_lighting_adapt_brightness_bedroom
-  - service: light.turn_on
-    target:
-      entity_id:
-      - light.kitchen_lights
-      - light.living_room_lights
-      - light.bedroom_lights
-    data:
-      brightness_pct: 100
-  - service: notify.mobile_app_oneplus_8pro_chrille
-    data:
-      message: Bovärd där
-      title: BOVÄRD
-  - service: notify.mobile_app_ac2003
-    data:
-      message: Bovärd där
-      title: BOVÄRD
   mode: single
 - id: '1648585743231'
   alias: Alarm - Triggered
@@ -851,6 +774,8 @@
       motion_detection_mode: normal
     target:
       device_id: 6af7a88d009637d36a125308d21def3a
+  - service: script.armed_blink
+    data: {}
   mode: single
 - id: '1648729286615'
   alias: Alarmo - Disarmed
@@ -880,6 +805,8 @@
     state: idle
   - service: script.camera_off
     data: {}
+  - service: script.disarmed_blink
+    data: {}
   mode: single
 - id: '1648729657211'
   alias: Alarmo - Arming
@@ -893,6 +820,8 @@
   condition: []
   action:
   - service: script.camera_on
+    data: {}
+  - service: script.arming_blink
     data: {}
   mode: single
 - id: '1648743916464'
@@ -910,6 +839,8 @@
     data: {}
     target:
       entity_id: timer.larm_triggered
+  - service: script.triggered_blink
+    data: {}
   mode: single
 - id: '1648756998368'
   alias: Alarm - Reminder
@@ -979,4 +910,144 @@
     data:
       message: Starkvind filter has less than 48 hours of usage left.
       title: Starkvind Filter Warning
+  mode: single
+- id: '1654179235658'
+  alias: Arm Home - On
+  description: ''
+  trigger:
+  - device_id: f565ec14f55a15d8e4494e020bae7cd2
+    domain: zha
+    platform: device
+    type: remote_button_short_press
+    subtype: turn_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'on'
+  action:
+  - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: arm_home
+  - wait_for_trigger:
+    - platform: device
+      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+      domain: alarm_control_panel
+      entity_id: alarm_control_panel.alarmo
+      type: armed_home
+    continue_on_timeout: false
+    timeout: '70'
+    enabled: false
+  - repeat:
+      count: '4'
+      sequence:
+      - service: light.toggle
+        data:
+          color_name: red
+        target:
+          entity_id:
+          - light.bedroom_lights
+          - light.living_room_lights
+          - light.office_lights
+          - light.kitchen_lights
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 1
+          milliseconds: 0
+    enabled: false
+  mode: single
+- id: '1654179275456'
+  alias: Arm Home - Off
+  description: ''
+  trigger:
+  - device_id: f565ec14f55a15d8e4494e020bae7cd2
+    domain: zha
+    platform: device
+    type: remote_button_short_press
+    subtype: turn_off
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'on'
+  - condition: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: is_armed_home
+  action:
+  - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: disarm
+  mode: single
+- id: '1654272604280'
+  alias: Office - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_sensor_on_off
+    domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
+    entity_id: sensor.lightlevel_office_illuminance
+    domain: sensor
+    below: 500
+  condition:
+  - type: is_illuminance
+    condition: device
+    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
+    entity_id: sensor.lightlevel_office_illuminance
+    domain: sensor
+    below: 500
+  - type: is_motion
+    condition: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_sensor_on_off
+    domain: binary_sensor
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id: light.office_lights
+  mode: single
+- id: '1654272813270'
+  alias: Office - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_sensor_on_off
+    domain: binary_sensor
+    for:
+      hours: 2
+      minutes: 0
+      seconds: 0
+  - type: illuminance
+    platform: device
+    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
+    entity_id: sensor.lightlevel_office_illuminance
+    domain: sensor
+    above: 700
+  condition: []
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id: light.office_lights
+  mode: single
+- id: '1654277215363'
+  alias: Unifi Cleanup
+  description: ''
+  trigger:
+  - platform: time
+    at: 04:00:00
+  condition: []
+  action:
+  - service: unifi.remove_clients
+    data: {}
   mode: single

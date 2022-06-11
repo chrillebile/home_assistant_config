@@ -1,0 +1,11 @@
+---
+# Light Group: Office
+#
+# https://www.home-assistant.io/integrations/light.group/
+#
+platform: group
+name: Office Lights
+entities:
+  - light.office_ceiling_christian
+  - light.office_ceiling_felicia
+  - light.office_ceiling_middle

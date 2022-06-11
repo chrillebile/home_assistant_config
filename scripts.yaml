@@ -55,3 +55,126 @@ alarm_triggered_clear:
     target:
       entity_id: timer.larm_triggered
   mode: single
+arming_blink:
+  alias: Arming - Blink
+  sequence:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id:
+      - switch.adaptive_lighting_adapt_color_bedroom
+  - repeat:
+      count: '4'
+      sequence:
+      - service: light.toggle
+        data:
+          color_name: blue
+        target:
+          entity_id: light.bedroom_lights
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 0
+          milliseconds: 500
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_adapt_color_bedroom
+  mode: single
+armed_blink:
+  alias: Armed - Blink
+  sequence:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_adapt_color_bedroom
+  - repeat:
+      count: '4'
+      sequence:
+      - service: light.toggle
+        data:
+          color_name: red
+        target:
+          entity_id: light.bedroom_lights
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 0
+          milliseconds: 500
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_adapt_color_bedroom
+  mode: single
+disarmed_blink:
+  alias: Disarmed - Blink
+  sequence:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_adapt_color_bedroom
+  - repeat:
+      count: '4'
+      sequence:
+      - service: light.toggle
+        data:
+          color_name: green
+        target:
+          entity_id: light.bedroom_lights
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 0
+          milliseconds: 500
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_adapt_color_bedroom
+  mode: single
+triggered_blink:
+  alias: Triggered - Blink
+  sequence:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id:
+      - switch.adaptive_lighting_adapt_color_bedroom
+      - switch.adaptive_lighting_adapt_color_living_room
+      - switch.adaptive_lighting_adapt_color_office
+      - switch.adaptive_lighting_adapt_brightness_bedroom
+      - switch.adaptive_lighting_adapt_brightness_living_room
+      - switch.adaptive_lighting_adapt_brightness_office
+  - repeat:
+      while:
+      - condition: device
+        device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+        domain: alarm_control_panel
+        entity_id: alarm_control_panel.alarmo
+        type: is_triggered
+      sequence:
+      - service: light.toggle
+        data:
+          color_name: red
+          brightness_pct: 100
+        target:
+          entity_id:
+          - light.bedroom_lights
+          - light.living_room_lights
+          - light.office_lights
+          - light.felicia_desk
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 0
+          milliseconds: 500
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id:
+      - switch.adaptive_lighting_adapt_brightness_bedroom
+      - switch.adaptive_lighting_adapt_brightness_living_room
+      - switch.adaptive_lighting_adapt_brightness_office
+      - switch.adaptive_lighting_adapt_color_bedroom
+      - switch.adaptive_lighting_adapt_color_living_room
+      - switch.adaptive_lighting_adapt_color_office
+  mode: single
