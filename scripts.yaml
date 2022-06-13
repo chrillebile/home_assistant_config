@@ -70,7 +70,8 @@ arming_blink:
         data:
           color_name: blue
         target:
-          entity_id: light.bedroom_lights
+          entity_id:
+          - light.ceiling_bedroom
       - delay:
           hours: 0
           minutes: 0
@@ -95,7 +96,8 @@ armed_blink:
         data:
           color_name: red
         target:
-          entity_id: light.bedroom_lights
+          entity_id:
+          - light.ceiling_bedroom
       - delay:
           hours: 0
           minutes: 0
@@ -120,7 +122,8 @@ disarmed_blink:
         data:
           color_name: green
         target:
-          entity_id: light.bedroom_lights
+          entity_id:
+          - light.ceiling_bedroom
       - delay:
           hours: 0
           minutes: 0

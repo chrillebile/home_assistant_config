@@ -1051,3 +1051,65 @@
   - service: unifi.remove_clients
     data: {}
   mode: single
+- id: '1654976784701'
+  alias: Vacuum Service - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.vacuum_service
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: xiaomi_miio.vacuum_goto
+    data:
+      y_coord: '27500'
+      x_coord: '25500'
+    target:
+      device_id: 784b56f01031f27c84c6a0673e82702a
+  mode: single
+- id: '1654977715113'
+  alias: Vacuum Service - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.vacuum_service
+    from: 'on'
+    to: 'off'
+  condition:
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: vacuum.roborock_vacuum_a27
+      state: idle
+    - condition: state
+      entity_id: vacuum.roborock_vacuum_a27
+      state: cleaning
+  action:
+  - device_id: 784b56f01031f27c84c6a0673e82702a
+    domain: vacuum
+    entity_id: vacuum.roborock_vacuum_a27
+    type: dock
+  mode: single
+- id: '1655023604469'
+  alias: Vacuum Docked
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 784b56f01031f27c84c6a0673e82702a
+    domain: vacuum
+    entity_id: vacuum.roborock_vacuum_a27
+    type: docked
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 10
+  condition: []
+  action:
+  - service: input_boolean.turn_off
+    data: {}
+    target:
+      entity_id: input_boolean.vacuum_service
+  mode: single
