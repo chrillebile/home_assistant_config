@@ -8,3 +8,4 @@ name: Living Room Lights
 entities:
   - light.floor
   - light.window
+  - light.cabinet
