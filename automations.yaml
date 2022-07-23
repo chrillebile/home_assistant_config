@@ -95,14 +95,9 @@
   - condition: or
     conditions:
     - condition: device
-      device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+      device_id: 1382f317deba50ed8c86f7af734e7430
       domain: media_player
-      entity_id: media_player.kitchen
-      type: is_playing
-    - condition: device
-      device_id: ade4535f6cc98c4d51c1a712eb9a73c1
-      domain: media_player
-      entity_id: media_player.43pus8505_12_3
+      entity_id: media_player.spotify_felicias
       type: is_playing
     - condition: device
       device_id: dbefae17fa5211ea9d1b49a619192941
@@ -122,11 +117,6 @@
   - choose:
     - conditions:
       - condition: device
-        device_id: 4bdf051aaa818b21fe2f85cdfc04629c
-        domain: media_player
-        entity_id: media_player.kitchen
-        type: is_playing
-      - condition: device
         device_id: 2a385c19b25953b43dffe44880ff01ed
         domain: media_player
         entity_id: media_player.living_room
@@ -136,7 +126,6 @@
         data: {}
         target:
           entity_id:
-          - media_player.kitchen
           - media_player.living_room
     - conditions:
       - condition: zone
@@ -147,6 +136,17 @@
         target:
           entity_id: media_player.spotify_christian_bilevits
         data: {}
+    - conditions:
+      - condition: device
+        device_id: 1382f317deba50ed8c86f7af734e7430
+        domain: media_player
+        entity_id: media_player.spotify_felicias
+        type: is_playing
+      sequence:
+      - service: media_player.media_pause
+        data: {}
+        target:
+          entity_id: media_player.spotify_felicias
     default: []
   mode: single
 - id: '1618177610102'
@@ -670,7 +670,7 @@
     device_id: cb663870e23eb5ab23f8e0039357a68e
     entity_id: sensor.lightlevel_living_room_illuminance
     domain: sensor
-    above: 400
+    above: 250
     for:
       hours: 0
       minutes: 1
@@ -769,11 +769,20 @@
       light: 'on'
     target:
       device_id: 6af7a88d009637d36a125308d21def3a
+  - choose:
+    - conditions:
+      - condition: device
+        device_id: 784b56f01031f27c84c6a0673e82702a
+        domain: vacuum
+        entity_id: vacuum.dusty
+        type: is_docked
+      sequence:
   - service: tapo_control.set_motion_detection_mode
     data:
-      motion_detection_mode: normal
+          motion_detection_mode: low
     target:
       device_id: 6af7a88d009637d36a125308d21def3a
+    default: []
   - service: script.armed_blink
     data: {}
   mode: single
@@ -1064,8 +1073,8 @@
   action:
   - service: xiaomi_miio.vacuum_goto
     data:
-      y_coord: '27500'
-      x_coord: '25500'
+      y_coord: '22500'
+      x_coord: '26300'
     target:
       device_id: 784b56f01031f27c84c6a0673e82702a
   mode: single
@@ -1082,15 +1091,15 @@
   - condition: or
     conditions:
     - condition: state
-      entity_id: vacuum.roborock_vacuum_a27
+      entity_id: vacuum.dusty
       state: idle
     - condition: state
-      entity_id: vacuum.roborock_vacuum_a27
+      entity_id: vacuum.dusty
       state: cleaning
   action:
   - device_id: 784b56f01031f27c84c6a0673e82702a
     domain: vacuum
-    entity_id: vacuum.roborock_vacuum_a27
+    entity_id: vacuum.dusty
     type: dock
   mode: single
 - id: '1655023604469'
@@ -1100,16 +1109,87 @@
   - platform: device
     device_id: 784b56f01031f27c84c6a0673e82702a
     domain: vacuum
-    entity_id: vacuum.roborock_vacuum_a27
+    entity_id: vacuum.dusty
     type: docked
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 10
   condition: []
   action:
   - service: input_boolean.turn_off
     data: {}
     target:
       entity_id: input_boolean.vacuum_service
+  mode: single
+- id: '1656839889690'
+  alias: Bedroom - Off
+  description: ''
+  trigger:
+  - type: not_occupied
+    platform: device
+    device_id: b49c3d9f25e32c44009c95f593f445da
+    entity_id: binary_sensor.bedroom_motion_sensor_occupancy
+    domain: binary_sensor
+    for:
+      hours: 2
+      minutes: 0
+      seconds: 0
+  condition: []
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id: light.bedroom_lights
+  mode: single
+- id: '1658511077678'
+  alias: Camera Detection - Cleaning
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 784b56f01031f27c84c6a0673e82702a
+    domain: vacuum
+    entity_id: vacuum.dusty
+    type: cleaning
+  - platform: device
+    device_id: 784b56f01031f27c84c6a0673e82702a
+    domain: vacuum
+    entity_id: vacuum.dusty
+    type: docked
+  condition:
+  - condition: or
+    conditions:
+    - condition: device
+      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+      domain: alarm_control_panel
+      entity_id: alarm_control_panel.alarmo
+      type: is_armed_home
+    - condition: device
+      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+      domain: alarm_control_panel
+      entity_id: alarm_control_panel.alarmo
+      type: is_armed_away
+  action:
+  - choose:
+    - conditions:
+      - condition: device
+        device_id: 784b56f01031f27c84c6a0673e82702a
+        domain: vacuum
+        entity_id: vacuum.dusty
+        type: is_cleaning
+      sequence:
+      - service: tapo_control.set_motion_detection_mode
+        data:
+          motion_detection_mode: 'off'
+        target:
+          device_id: 6af7a88d009637d36a125308d21def3a
+    - conditions:
+      - condition: device
+        device_id: 784b56f01031f27c84c6a0673e82702a
+        domain: vacuum
+        entity_id: vacuum.dusty
+        type: is_docked
+      sequence:
+      - service: tapo_control.set_motion_detection_mode
+        data:
+          motion_detection_mode: low
+        target:
+          device_id: 6af7a88d009637d36a125308d21def3a
+    default: []
   mode: single
