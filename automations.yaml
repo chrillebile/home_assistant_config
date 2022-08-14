@@ -1,68 +1,3 @@
-- id: '1577555518352'
-  alias: Home - Off
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: input_boolean.someone_home
-    from: 'on'
-    to: 'off'
-  - platform: device
-    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
-    domain: alarm_control_panel
-    entity_id: alarm_control_panel.alarmo
-    type: armed_away
-  condition: []
-  action:
-  - service: light.turn_off
-    data: {}
-    target:
-      area_id:
-      - a13da43aa35f4548a72c6e44312a414a
-      entity_id:
-      - light.living_room_lights
-      - light.bedroom_lights
-  - service: media_player.media_stop
-    target:
-      device_id:
-      - ade4535f6cc98c4d51c1a712eb9a73c1
-      - 4bdf051aaa818b21fe2f85cdfc04629c
-    data: {}
-  - choose:
-    - conditions:
-      - condition: state
-        state: 'on'
-        entity_id: media_player.43pus8505_12_3
-      sequence:
-      - service: media_player.turn_off
-        target:
-          entity_id: media_player.43pus8505_12_3
-        data: {}
-    default: []
-  mode: single
-- id: '1577565666489'
-  alias: Home - On
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: input_boolean.someone_home
-    from: 'off'
-    to: 'on'
-  condition:
-  - condition: state
-    entity_id: sun.sun
-    state: below_horizon
-  action:
-  - data: {}
-    service: light.turn_on
-    target:
-      area_id: e4cd392f3436439681504b0610b28b1d
-  - condition: numeric_state
-    entity_id: sensor.lumi_lumi_weather_temperature
-    above: '25'
-  - service: switch.turn_on
-    target:
-      entity_id: switch.office_fan
-  mode: single
 - id: '1577566232007'
   alias: Play Music - Ring
   description: ''
@@ -148,88 +83,6 @@
         target:
           entity_id: media_player.spotify_felicias
     default: []
-  mode: single
-- id: '1618177610102'
-  alias: Night Light - Stairs - On
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.stair_sensor_on_off
-    domain: binary_sensor
-  condition:
-  - condition: state
-    entity_id: input_boolean.night_mode
-    state: 'on'
-  action:
-  - service: switch.turn_on
-    target:
-      entity_id: switch.adaptive_lighting_sleep_mode_kitchen
-  - type: turn_on
-    device_id: ea02134afc6d69b0da1921c9af86bcb5
-    entity_id: light.ceiling_toilet
-    domain: light
-    brightness_pct: 1
-  mode: single
-- id: '1618177885328'
-  alias: Night Light - Kitchen - On
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-  condition:
-  - condition: state
-    entity_id: input_boolean.night_mode
-    state: 'on'
-  action:
-  - service: switch.turn_on
-    target:
-      entity_id: switch.adaptive_lighting_sleep_mode_kitchen
-  - type: turn_on
-    device_id: ea02134afc6d69b0da1921c9af86bcb5
-    entity_id: light.ceiling_toilet
-    domain: light
-    brightness_pct: 1
-  mode: single
-- id: '1618178644833'
-  alias: Night Light - Off
-  description: ''
-  trigger:
-  - type: no_motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 4
-      seconds: 0
-  condition:
-  - type: is_no_motion
-    condition: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-  - condition: numeric_state
-    attribute: brightness
-    above: '1'
-    below: '10'
-    entity_id: light.ceiling_toilet
-  - condition: state
-    entity_id: input_boolean.night_mode
-    state: 'on'
-  - condition: state
-    entity_id: input_boolean.guest_mode
-    state: 'off'
-  action:
-  - type: turn_off
-    device_id: ea02134afc6d69b0da1921c9af86bcb5
-    entity_id: light.ceiling_toilet
-    domain: light
   mode: single
 - id: '1618230174554'
   alias: Night Mode - Toggle
@@ -322,81 +175,6 @@
   - service: input_boolean.turn_off
     target:
       entity_id: input_boolean.someone_home
-  mode: single
-- id: '1618431144975'
-  alias: Kitchen - Off
-  description: ''
-  trigger:
-  - type: no_motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-    for:
-      hours: 0
-      minutes: 8
-      seconds: 0
-  condition:
-  - condition: state
-    entity_id: input_boolean.guest_mode
-    state: 'off'
-  action:
-  - service: light.turn_off
-    data: {}
-    target:
-      area_id: e4cd392f3436439681504b0610b28b1d
-  mode: single
-- id: '1618432744438'
-  alias: Kitchen - On
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.kitchen_sensor_on_off
-    domain: binary_sensor
-  condition:
-  - condition: state
-    entity_id: input_boolean.night_mode
-    state: 'off'
-  - condition: numeric_state
-    entity_id: sensor.lightlevel_kitchen_illuminance
-    below: '50'
-  action:
-  - service: light.turn_on
-    data: {}
-    target:
-      area_id: e4cd392f3436439681504b0610b28b1d
-  mode: single
-- id: '1619886667783'
-  alias: Raspberry Health - Fan - On
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.processor_temperature
-    for: 00:01:00
-    above: '52'
-  condition: []
-  action:
-  - type: turn_on
-    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-    entity_id: switch.rasp_fan_on_off
-    domain: switch
-  mode: single
-- id: '1619886740896'
-  alias: Raspberry Health - Fan - Off
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.processor_temperature
-    below: '40'
-    for: 00:03:00
-  condition: []
-  action:
-  - type: turn_off
-    device_id: 6e6a02b66d3f3a9bb755aa52f4de1ee0
-    entity_id: switch.rasp_fan_on_off
-    domain: switch
   mode: single
 - id: '1620768571160'
   alias: Sleep Mode - Off
@@ -574,84 +352,35 @@
     target:
       entity_id: timer.music_dead
   mode: single
-- id: '1628365800846'
-  alias: Thunder
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.blitzortung_lightning_counter
-    above: '0'
-  - platform: numeric_state
-    entity_id: sensor.blitzortung_lightning_distance
-    below: '12'
-  condition:
-  - type: is_value
-    condition: device
-    device_id: 4f8127b1447577de20bce9e23d178438
-    entity_id: sensor.blitzortung_lightning_distance
-    domain: sensor
-    below: 12
-  action:
-  - service: notify.mobile_app_ac2003
-    data:
-      message: Lightning ⚡ nearby, be ready to shut down technology.
-      title: ⚡⚡⚡
-  - service: notify.mobile_app_oneplus_8pro_chrille
-    data:
-      message: Lightning ⚡ nearby
-      title: ⚡⚡⚡
-  mode: single
-- id: '1628614311230'
-  alias: Thunder - Light
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.blitzortung_lightning_distance
-    below: '5'
-  condition:
-  - condition: or
-    conditions:
-    - condition: zone
-      entity_id: person.christian
-      zone: zone.home
-    - condition: zone
-      entity_id: person.felicia
-      zone: zone.home
-  - condition: time
-    after: 09:00
-    before: '21:00'
-  action:
-  - service: light.turn_on
-    target:
-      area_id:
-      - 5c8d6d678e49498a9e77ff541ec6fad1
-      - e4cd392f3436439681504b0610b28b1d
-  mode: single
 - id: '1630519784855'
   alias: Living Room Light - On
   description: ''
   trigger:
-  - type: illuminance
-    platform: device
-    device_id: cb663870e23eb5ab23f8e0039357a68e
-    entity_id: sensor.lightlevel_living_room_illuminance
-    domain: sensor
-    below: 200
   - type: motion
     platform: device
-    device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.living_room_sensor_on_off
+    device_id: facee974798219c89cb3f00a459a9e0d
+    entity_id: binary_sensor.living_room_motion_sensor_occupancy
     domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: 9ee3b5477f3a39bb16318c52969b0f46
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 125
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
   condition:
   - condition: state
     entity_id: input_boolean.someone_home
     state: 'on'
   - type: is_illuminance
     condition: device
-    device_id: cb663870e23eb5ab23f8e0039357a68e
-    entity_id: sensor.lightlevel_living_room_illuminance
+    device_id: 9ee3b5477f3a39bb16318c52969b0f46
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
     domain: sensor
-    below: 200
+    below: 125
   - condition: state
     entity_id: input_boolean.sleep_mode
     state: 'off'
@@ -665,25 +394,25 @@
   alias: Living Room Light - Off
   description: ''
   trigger:
-  - type: illuminance
-    platform: device
-    device_id: cb663870e23eb5ab23f8e0039357a68e
-    entity_id: sensor.lightlevel_living_room_illuminance
-    domain: sensor
-    above: 250
-    for:
-      hours: 0
-      minutes: 1
-      seconds: 0
   - type: no_motion
     platform: device
-    device_id: 1676fc84015df0dfd79488157a70b6c1
-    entity_id: binary_sensor.living_room_sensor_on_off
+    device_id: facee974798219c89cb3f00a459a9e0d
+    entity_id: binary_sensor.living_room_motion_sensor_occupancy
     domain: binary_sensor
     for:
       hours: 2
       minutes: 0
       seconds: 0
+  - type: illuminance
+    platform: device
+    device_id: 9ee3b5477f3a39bb16318c52969b0f46
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    above: 150
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
   condition:
   - condition: state
     entity_id: input_boolean.guest_mode
@@ -777,11 +506,11 @@
         entity_id: vacuum.dusty
         type: is_docked
       sequence:
-  - service: tapo_control.set_motion_detection_mode
-    data:
+      - service: tapo_control.set_motion_detection_mode
+        data:
           motion_detection_mode: low
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+        target:
+          device_id: 6af7a88d009637d36a125308d21def3a
     default: []
   - service: script.armed_blink
     data: {}
@@ -856,9 +585,10 @@
   description: ''
   trigger:
   - platform: state
-    entity_id: input_boolean.someone_home
-    from: 'on'
-    to: 'off'
+    entity_id:
+    - input_boolean.someone_home
+    from: 'off'
+    to: 'on'
   condition:
   - condition: device
     device_id: 16422767a6f41cb2572f0bcf3b1ddb73
@@ -874,51 +604,6 @@
     data:
       message: Do not forget to turn on the alarm
       title: Alarm - Reminder
-  mode: single
-- id: '1651005399646'
-  alias: Air Quality - On
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: input_boolean.someone_home
-    to: 'on'
-    from: 'off'
-  condition: []
-  action:
-  - service: fan.set_preset_mode
-    data:
-      preset_mode: Auto
-    target:
-      entity_id: fan.tradfri_starkvind
-  mode: single
-- id: '1651005519623'
-  alias: Air Quality - Off
-  description: ''
-  trigger:
-  - platform: state
-    entity_id: input_boolean.someone_home
-    from: 'on'
-    to: 'off'
-  condition: []
-  action:
-  - device_id: 3f77bff2b8d810a66cdfdfb6fdee15d1
-    domain: fan
-    entity_id: fan.tradfri_starkvind
-    type: turn_off
-  mode: single
-- id: '1651132029158'
-  alias: Filter Warning
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.tradfri_starkvind_filter_time_left
-    below: '48'
-  condition: []
-  action:
-  - service: notify.mobile_app_oneplus_8pro_chrille
-    data:
-      message: Starkvind filter has less than 48 hours of usage left.
-      title: Starkvind Filter Warning
   mode: single
 - id: '1654179235658'
   alias: Arm Home - On
@@ -989,65 +674,6 @@
     domain: alarm_control_panel
     entity_id: alarm_control_panel.alarmo
     type: disarm
-  mode: single
-- id: '1654272604280'
-  alias: Office - On
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.office_sensor_on_off
-    domain: binary_sensor
-  - type: illuminance
-    platform: device
-    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
-    entity_id: sensor.lightlevel_office_illuminance
-    domain: sensor
-    below: 500
-  condition:
-  - type: is_illuminance
-    condition: device
-    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
-    entity_id: sensor.lightlevel_office_illuminance
-    domain: sensor
-    below: 500
-  - type: is_motion
-    condition: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.office_sensor_on_off
-    domain: binary_sensor
-  action:
-  - service: light.turn_on
-    data: {}
-    target:
-      entity_id: light.office_lights
-  mode: single
-- id: '1654272813270'
-  alias: Office - Off
-  description: ''
-  trigger:
-  - type: no_motion
-    platform: device
-    device_id: db06330462a9c0236cf4942a2bf2f843
-    entity_id: binary_sensor.office_sensor_on_off
-    domain: binary_sensor
-    for:
-      hours: 2
-      minutes: 0
-      seconds: 0
-  - type: illuminance
-    platform: device
-    device_id: d9e0004b3c5a9a3a297759fb916b6ffd
-    entity_id: sensor.lightlevel_office_illuminance
-    domain: sensor
-    above: 700
-  condition: []
-  action:
-  - service: light.turn_off
-    data: {}
-    target:
-      entity_id: light.office_lights
   mode: single
 - id: '1654277215363'
   alias: Unifi Cleanup
@@ -1122,9 +748,9 @@
   alias: Bedroom - Off
   description: ''
   trigger:
-  - type: not_occupied
+  - type: no_motion
     platform: device
-    device_id: b49c3d9f25e32c44009c95f593f445da
+    device_id: 21c22b5a33309b3fe8fa4fe5b224743f
     entity_id: binary_sensor.bedroom_motion_sensor_occupancy
     domain: binary_sensor
     for:
@@ -1192,4 +818,66 @@
         target:
           device_id: 6af7a88d009637d36a125308d21def3a
     default: []
+  mode: single
+- id: '1660497944929'
+  alias: Office - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: df952fdd3aae05959fdfe475f0f9af38
+    entity_id: binary_sensor.office_motion_sensor_occupancy
+    domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: c679e66f61a7713a115b22e624f02f3b
+    entity_id: sensor.office_lightlevel_illuminance_lux
+    domain: sensor
+    below: 200
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  condition:
+  - type: is_illuminance
+    condition: device
+    device_id: c679e66f61a7713a115b22e624f02f3b
+    entity_id: sensor.office_lightlevel_illuminance_lux
+    domain: sensor
+    below: 200
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id: light.office_lights
+  mode: single
+- id: '1660498070636'
+  alias: Office - Off
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: df952fdd3aae05959fdfe475f0f9af38
+    entity_id: binary_sensor.office_motion_sensor_occupancy
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 30
+      seconds: 0
+  - type: illuminance
+    platform: device
+    device_id: c679e66f61a7713a115b22e624f02f3b
+    entity_id: sensor.office_lightlevel_illuminance_lux
+    domain: sensor
+    above: 250
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  condition: []
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id: light.office_lights
   mode: single

@@ -24,6 +24,7 @@ plex.conf
 pyozw.sqlite
 secrets.yaml
 tradfri.conf
+zigbee2mqtt/database.db
 
 # Temporary files
 *.db-journal
@@ -38,6 +39,8 @@ lib
 home-assistant.log*
 ozw_log.txt
 aircast.xml
+zigbee2mqtt/log/
+zigbee2mqtt/state.json
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
