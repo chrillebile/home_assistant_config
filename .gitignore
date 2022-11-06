@@ -25,6 +25,7 @@ pyozw.sqlite
 secrets.yaml
 tradfri.conf
 zigbee2mqtt/database.db
+zigbee.db*
 
 # Temporary files
 *.db-journal

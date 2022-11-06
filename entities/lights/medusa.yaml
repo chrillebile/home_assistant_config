@@ -1,0 +1,13 @@
+---
+# Light group: Medusa
+#
+# https://www.home-assistant.io/integrations/light.group/
+#
+platform: group
+name: Medusa Lights
+entities:
+  - light.medusa_1
+  - light.medusa_2
+  - light.medusa_3
+  - light.medusa_4
+  - light.medusa_5

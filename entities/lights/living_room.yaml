@@ -7,5 +7,7 @@ platform: group
 name: Living Room Lights
 entities:
   - light.floor
-  - light.window
+  - light.window_tv
+  - light.window_sofa
   - light.cabinet
+  - light.medusa_lights

@@ -130,23 +130,19 @@
     target:
       entity_id: input_boolean.someone_home
     data: {}
-  - choose:
-    - conditions:
-      - condition: device
-        device_id: 16422767a6f41cb2572f0bcf3b1ddb73
-        domain: alarm_control_panel
-        entity_id: alarm_control_panel.alarmo
-        type: is_armed_away
-      sequence:
-      - service: notify.mobile_app_oneplus_8pro_chrille
-        data:
-          message: Do not forget to turn off the alarm
-          title: Alarm - Reminder
-      - service: notify.mobile_app_ac2003
-        data:
-          message: Do not forget to turn off the alarm
-          title: Alarm - Reminder
-    default: []
+  - if:
+    - condition: device
+      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+      domain: alarm_control_panel
+      entity_id: alarm_control_panel.alarmo
+      type: is_disarmed
+    - condition: state
+      entity_id: camera.office_camera_hd
+      attribute: privacy_mode
+      state: 'off'
+    then:
+    - service: script.camera_off
+      data: {}
   mode: single
 - id: '1618341855293'
   alias: Someone Home - Off
@@ -212,10 +208,7 @@
     from: 'off'
     to: 'on'
     entity_id: input_boolean.sleep_mode
-  condition:
-  - condition: time
-    after: '22:00'
-    before: 06:00
+  condition: []
   action:
   - service: switch.turn_on
     target:
@@ -238,7 +231,13 @@
   - platform: homeassistant
     event: start
   - platform: state
-    entity_id: sun.sun
+    entity_id:
+    - sun.sun
+    to: above_horizon
+  - platform: state
+    entity_id:
+    - sun.sun
+    to: below_horizon
   condition: []
   action:
   - choose:
@@ -250,10 +249,12 @@
       - service: frontend.set_theme
         data:
           name: Milky White
+          mode: light
     default:
     - service: frontend.set_theme
       data:
         name: Kinda Dark
+        mode: dark
   mode: single
 - id: '1621754049560'
   alias: Paus Music When TV starts playing
@@ -281,7 +282,8 @@
   description: ''
   trigger:
   - platform: state
-    entity_id: sensor.in2023_phone_state
+    entity_id:
+    - sensor.christian_phone_phone_state
     to: offhook
   condition:
   - condition: zone
@@ -291,6 +293,7 @@
   - service: input_boolean.turn_on
     target:
       entity_id: input_boolean.in_call
+    data: {}
   mode: single
 - id: '1626800322118'
   alias: In Call - Felicia
@@ -313,7 +316,8 @@
   description: ''
   trigger:
   - platform: state
-    entity_id: sensor.in2023_phone_state
+    entity_id:
+    - sensor.christian_phone_phone_state
     to: idle
   - platform: state
     entity_id: sensor.ac2003_telefonstatus
@@ -323,12 +327,13 @@
     entity_id: sensor.ac2003_telefonstatus
     state: idle
   - condition: state
-    entity_id: sensor.in2023_phone_state
+    entity_id: sensor.christian_phone_phone_state
     state: idle
   action:
   - service: input_boolean.turn_off
     target:
       entity_id: input_boolean.in_call
+    data: {}
   mode: restart
 - id: '1626800823791'
   alias: Music Paused
@@ -352,63 +357,25 @@
     target:
       entity_id: timer.music_dead
   mode: single
-- id: '1630519784855'
-  alias: Living Room Light - On
-  description: ''
-  trigger:
-  - type: motion
-    platform: device
-    device_id: facee974798219c89cb3f00a459a9e0d
-    entity_id: binary_sensor.living_room_motion_sensor_occupancy
-    domain: binary_sensor
-  - type: illuminance
-    platform: device
-    device_id: 9ee3b5477f3a39bb16318c52969b0f46
-    entity_id: sensor.living_room_lightlevel_illuminance_lux
-    domain: sensor
-    below: 125
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 30
-  condition:
-  - condition: state
-    entity_id: input_boolean.someone_home
-    state: 'on'
-  - type: is_illuminance
-    condition: device
-    device_id: 9ee3b5477f3a39bb16318c52969b0f46
-    entity_id: sensor.living_room_lightlevel_illuminance_lux
-    domain: sensor
-    below: 125
-  - condition: state
-    entity_id: input_boolean.sleep_mode
-    state: 'off'
-  action:
-  - service: light.turn_on
-    data: {}
-    target:
-      entity_id: light.living_room_lights
-  mode: single
 - id: '1631076332081'
   alias: Living Room Light - Off
   description: ''
   trigger:
   - type: no_motion
     platform: device
-    device_id: facee974798219c89cb3f00a459a9e0d
-    entity_id: binary_sensor.living_room_motion_sensor_occupancy
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
     domain: binary_sensor
     for:
-      hours: 2
-      minutes: 0
+      hours: 0
+      minutes: 15
       seconds: 0
   - type: illuminance
     platform: device
     device_id: 9ee3b5477f3a39bb16318c52969b0f46
     entity_id: sensor.living_room_lightlevel_illuminance_lux
     domain: sensor
-    above: 150
+    above: 175
     for:
       hours: 0
       minutes: 0
@@ -417,6 +384,11 @@
   - condition: state
     entity_id: input_boolean.guest_mode
     state: 'off'
+  - condition: device
+    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+    domain: media_player
+    entity_id: media_player.living_room_tv
+    type: is_off
   action:
   - service: light.turn_off
     data: {}
@@ -460,20 +432,29 @@
     entity_id: timer.larm_triggered
     state: active
   action:
-  - service: notify.mobile_app_oneplus_8pro_chrille
+  - service: notify.mobile_app_christian_phone
     data:
       message: A {{trigger.payload_json["after"]["label"]}} was detected.
       data:
         image: https://v0i0ebntx11uogid890nd1vnnqiwwe81.ui.nabu.casa/api/frigate/notifications/{{trigger.payload_json["after"]["id"]}}/thumbnail.jpg?format=android
         tag: '{{trigger.payload_json["after"]["id"]}}'
         when: '{{trigger.payload_json["after"]["start_time"]|int}}'
-  - service: notify.mobile_app_ac2003
+  - service: notify.mobile_app_felicia_phone
     data:
       message: A {{trigger.payload_json["after"]["label"]}} was detected.
       data:
         image: https://v0i0ebntx11uogid890nd1vnnqiwwe81.ui.nabu.casa/api/frigate/notifications/{{trigger.payload_json["after"]["id"]}}/thumbnail.jpg?format=android
         tag: '{{trigger.payload_json["after"]["id"]}}'
         when: '{{trigger.payload_json["after"]["start_time"]|int}}'
+  - service: tts.cloud_say
+    data:
+      cache: true
+      entity_id:
+      - media_player.living_room
+      - media_player.office
+      - media_player.bedroom
+      - media_player.kitchen
+      message: The alarm is triggered and you have been recorded!
   mode: single
 - id: '1648729198501'
   alias: Alarmo - Armed
@@ -491,13 +472,11 @@
     type: armed_home
   condition: []
   action:
-  - service: tapo_control.set_alarm_mode
-    data:
-      alarm_mode: 'on'
-      sound: 'on'
-      light: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - device_id: 6af7a88d009637d36a125308d21def3a
+    domain: select
+    entity_id: select.office_camera_automatic_alarm
+    type: select_option
+    option: both
   - choose:
     - conditions:
       - condition: device
@@ -506,11 +485,11 @@
         entity_id: vacuum.dusty
         type: is_docked
       sequence:
-      - service: tapo_control.set_motion_detection_mode
-        data:
-          motion_detection_mode: low
-        target:
-          device_id: 6af7a88d009637d36a125308d21def3a
+      - device_id: 6af7a88d009637d36a125308d21def3a
+        domain: select
+        entity_id: select.office_camera_motion_detection
+        type: select_option
+        option: normal
     default: []
   - service: script.armed_blink
     data: {}
@@ -526,18 +505,16 @@
     type: disarmed
   condition: []
   action:
-  - service: tapo_control.set_alarm_mode
-    data:
-      alarm_mode: 'off'
-      sound: 'off'
-      light: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
-  - service: tapo_control.set_motion_detection_mode
-    data:
-      motion_detection_mode: 'off'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - device_id: 6af7a88d009637d36a125308d21def3a
+    domain: select
+    entity_id: select.office_camera_automatic_alarm
+    type: select_option
+    option: 'off'
+  - device_id: 6af7a88d009637d36a125308d21def3a
+    domain: select
+    entity_id: select.office_camera_motion_detection
+    type: select_option
+    option: 'off'
   - condition: state
     entity_id: timer.larm_triggered
     state: idle
@@ -594,19 +571,20 @@
     device_id: 16422767a6f41cb2572f0bcf3b1ddb73
     domain: alarm_control_panel
     entity_id: alarm_control_panel.alarmo
-    type: is_disarmed
+    type: is_armed_away
   action:
-  - service: notify.mobile_app_oneplus_8pro_chrille
-    data:
-      message: Do not forget to turn on the alarm
-      title: Alarm - Reminder
-  - service: notify.mobile_app_ac2003
-    data:
-      message: Do not forget to turn on the alarm
-      title: Alarm - Reminder
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: Alarm - Reminder
+        message: Do not forget to turn off the alarm!
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: Alarm - Reminder
+        message: Do not forget to turn off the alarm!
   mode: single
 - id: '1654179235658'
-  alias: Arm Home - On
+  alias: Sleep switch - On
   description: ''
   trigger:
   - device_id: f565ec14f55a15d8e4494e020bae7cd2
@@ -619,37 +597,30 @@
     entity_id: input_boolean.someone_home
     state: 'on'
   action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.office_lights
+      - light.living_room_lights
+      - light.bedroom_lights
+  - service: input_boolean.turn_on
+    data: {}
+    target:
+      entity_id: input_boolean.sleep_mode
+  - wait_for_trigger:
+    - device_id: f565ec14f55a15d8e4494e020bae7cd2
+      domain: zha
+      platform: device
+      type: remote_button_short_press
+      subtype: turn_on
+    continue_on_timeout: false
+    timeout: '20'
   - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
     domain: alarm_control_panel
     entity_id: alarm_control_panel.alarmo
     type: arm_home
-  - wait_for_trigger:
-    - platform: device
-      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
-      domain: alarm_control_panel
-      entity_id: alarm_control_panel.alarmo
-      type: armed_home
-    continue_on_timeout: false
-    timeout: '70'
-    enabled: false
-  - repeat:
-      count: '4'
-      sequence:
-      - service: light.toggle
-        data:
-          color_name: red
-        target:
-          entity_id:
-          - light.bedroom_lights
-          - light.living_room_lights
-          - light.office_lights
-          - light.kitchen_lights
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 1
-          milliseconds: 0
-    enabled: false
+    code: ''
   mode: single
 - id: '1654179275456'
   alias: Arm Home - Off
@@ -674,6 +645,7 @@
     domain: alarm_control_panel
     entity_id: alarm_control_panel.alarmo
     type: disarm
+    code: ''
   mode: single
 - id: '1654277215363'
   alias: Unifi Cleanup
@@ -750,12 +722,12 @@
   trigger:
   - type: no_motion
     platform: device
-    device_id: 21c22b5a33309b3fe8fa4fe5b224743f
-    entity_id: binary_sensor.bedroom_motion_sensor_occupancy
+    device_id: b49c3d9f25e32c44009c95f593f445da
+    entity_id: binary_sensor.bedroom_motion_sensor_motion
     domain: binary_sensor
     for:
-      hours: 2
-      minutes: 0
+      hours: 0
+      minutes: 5
       seconds: 0
   condition: []
   action:
@@ -800,11 +772,11 @@
         entity_id: vacuum.dusty
         type: is_cleaning
       sequence:
-      - service: tapo_control.set_motion_detection_mode
-        data:
-          motion_detection_mode: 'off'
-        target:
-          device_id: 6af7a88d009637d36a125308d21def3a
+      - device_id: 6af7a88d009637d36a125308d21def3a
+        domain: select
+        entity_id: select.office_camera_motion_detection
+        type: select_option
+        option: 'off'
     - conditions:
       - condition: device
         device_id: 784b56f01031f27c84c6a0673e82702a
@@ -812,11 +784,11 @@
         entity_id: vacuum.dusty
         type: is_docked
       sequence:
-      - service: tapo_control.set_motion_detection_mode
-        data:
-          motion_detection_mode: low
-        target:
-          device_id: 6af7a88d009637d36a125308d21def3a
+      - device_id: 6af7a88d009637d36a125308d21def3a
+        domain: select
+        entity_id: select.office_camera_motion_detection
+        type: select_option
+        option: low
     default: []
   mode: single
 - id: '1660497944929'
@@ -825,8 +797,8 @@
   trigger:
   - type: motion
     platform: device
-    device_id: df952fdd3aae05959fdfe475f0f9af38
-    entity_id: binary_sensor.office_motion_sensor_occupancy
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_motion_sensor_motion
     domain: binary_sensor
   - type: illuminance
     platform: device
@@ -857,12 +829,12 @@
   trigger:
   - type: no_motion
     platform: device
-    device_id: df952fdd3aae05959fdfe475f0f9af38
-    entity_id: binary_sensor.office_motion_sensor_occupancy
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_motion_sensor_motion
     domain: binary_sensor
     for:
       hours: 0
-      minutes: 30
+      minutes: 5
       seconds: 0
   - type: illuminance
     platform: device
@@ -879,5 +851,799 @@
   - service: light.turn_off
     data: {}
     target:
-      entity_id: light.office_lights
+      entity_id:
+      - light.office_lights
+      - light.christian_desk
+      - light.felicia_desk
+  mode: single
+- id: '1660768810269'
+  alias: Home - Bedroom - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    from: 'off'
+    to: 'on'
+  condition:
+  - type: is_illuminance
+    condition: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 50
+  action:
+  - wait_for_trigger:
+    - type: motion
+      platform: device
+      device_id: b49c3d9f25e32c44009c95f593f445da
+      entity_id: binary_sensor.bedroom_motion_sensor_motion
+      domain: binary_sensor
+    timeout: '300'
+    continue_on_timeout: false
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id: light.bedroom_lights
+  mode: single
+- id: '1660938425662'
+  alias: 'Extensive Wattage Usage '
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.electricity_meter_smartenergymetering
+    above: '300'
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 15
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'off'
+  action:
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: 'Extensive Wattage Usage '
+        message: 'Home is using more power than usual '
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: 'Extensive Wattage Usage '
+        message: 'Home is using more power than usual '
+  mode: single
+- id: '1661160311856'
+  alias: Home - off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    from: 'on'
+    to: 'off'
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: armed_away
+  condition: []
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.office_lights
+      - light.bedroom_lights
+      - light.living_room_lights
+  - if:
+    - condition: numeric_state
+      entity_id: sensor.electricity_meter_smartenergymetering
+      above: '350'
+    then:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: Warning - Oven might be on!
+        message: The oven or other power-hungry device might still be on!
+    - service: notify.mobile_app_christians_mac_studio
+      data:
+        title: Warning - Oven might be on!
+        message: The oven or other power-hungry device might still be on!
+  - service: media_player.media_stop
+    data: {}
+    target:
+      entity_id:
+      - media_player.living_room
+      - media_player.office
+      - media_player.kitchen
+      - media_player.bedroom
+  - if:
+    - condition: device
+      device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+      domain: media_player
+      entity_id: media_player.living_room_tv
+      type: is_on
+    then:
+    - type: turn_off
+      device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+      entity_id: remote.living_room_tv
+      domain: remote
+  mode: single
+- id: '1661455053874'
+  alias: UPS Usage - Warning
+  description: ''
+  trigger:
+  - type: value
+    platform: device
+    device_id: 6cb119b2a9c791ac64b9b2edcd736744
+    entity_id: sensor.myups_load
+    domain: sensor
+    above: 50
+  condition: []
+  action:
+  - parallel:
+    - parallel:
+      - service: notify.mobile_app_christian_phone
+        data:
+          message: The UPS load is above 50%
+          title: UPS - Unusual load
+      - service: notify.mobile_app_felicia_phone
+        data:
+          title: UPS - Unusual load
+          message: The UPS load is above 50%
+  mode: single
+- id: '1661455389756'
+  alias: UPS Usage - Low Battery
+  description: ''
+  trigger:
+  - type: battery_level
+    platform: device
+    device_id: 6cb119b2a9c791ac64b9b2edcd736744
+    entity_id: sensor.myups_battery_charge
+    domain: sensor
+    below: 50
+  condition: []
+  action:
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        message: Battery running low, below 50%
+        title: ⚡️⚡️⚡️Power Outage - Warning⚡️⚡️⚡️
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: ⚡️⚡️⚡️Power Outage - Warning⚡️⚡️⚡️
+        message: Battery running low, below 50%
+  mode: single
+- id: '1661545204697'
+  alias: 'Power Outage '
+  description: ''
+  trigger:
+  - type: voltage
+    platform: device
+    device_id: 6cb119b2a9c791ac64b9b2edcd736744
+    entity_id: sensor.myups_input_voltage
+    domain: sensor
+    below: 1
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 5
+  condition: []
+  action:
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: ⚡️⚡️⚡️Power Outage⚡️⚡️⚡️
+        message: There's an power outage, unplug for longer lifespan.
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: ⚡️⚡️⚡️Power Outage⚡️⚡️⚡️
+        message: There's an power outage, unplug for longer lifespan.
+  mode: single
+- id: '1661611311935'
+  alias: Nest Protect - On
+  description: ''
+  trigger:
+  - type: smoke
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_smoke_status
+    domain: binary_sensor
+  - type: co
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_co_status
+    domain: binary_sensor
+  - type: hot
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_heat_status
+    domain: binary_sensor
+  condition: []
+  action:
+  - service: script.camera_on
+    data: {}
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: Nest Protect - Triggered
+        message: The nest protect has triggered, check camera or area!
+    - service: notify.mobile_app_felicia_phone
+      data:
+        message: The nest protect has triggered, check camera or area!
+        title: Nest Protect - Triggered
+  mode: single
+- id: '1661611420053'
+  alias: Nest Protect - Off
+  description: ''
+  trigger:
+  - type: no_smoke
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_smoke_status
+    domain: binary_sensor
+  - type: no_co
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_co_status
+    domain: binary_sensor
+  - type: not_hot
+    platform: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_heat_status
+    domain: binary_sensor
+  condition:
+  - type: is_no_smoke
+    condition: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_smoke_status
+    domain: binary_sensor
+  - type: is_no_co
+    condition: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_co_status
+    domain: binary_sensor
+  - type: is_not_hot
+    condition: device
+    device_id: 533cfc3ab5f1b3b14293b27bee3d846e
+    entity_id: binary_sensor.nest_protect_hallway_heat_status
+    domain: binary_sensor
+  action:
+  - service: script.camera_off
+    data: {}
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: Nest Protect - Cleared
+        message: Trigger has cleared.
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: Nest Protect - Cleared
+        message: Trigger has cleared.
+  mode: single
+- id: '1661791664270'
+  alias: Alarm Off - Motion
+  description: When no one is home, alarm is not set and motion is detected.
+  trigger:
+  - type: motion
+    platform: device
+    device_id: b49c3d9f25e32c44009c95f593f445da
+    entity_id: binary_sensor.bedroom_motion_sensor_motion
+    domain: binary_sensor
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+  - type: motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_motion_sensor_motion
+    domain: binary_sensor
+  condition:
+  - condition: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: is_disarmed
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'off'
+  action:
+  - if:
+    - condition: state
+      entity_id: camera.office_camera_hd
+      attribute: privacy_mode
+      state: 'on'
+    then:
+    - parallel:
+      - service: script.camera_on
+        data: {}
+      - service: notify.mobile_app_christian_phone
+        data:
+          title: Alarm OFF - Motion Detected
+          message: The alarm is OFF, but motion was detected so camera turned on.
+      - service: notify.mobile_app_felicia_phone
+        data:
+          message: The alarm is OFF, but motion was detected so camera turned on.
+          title: Alarm OFF - Motion Detected
+    else:
+    - parallel:
+      - service: notify.mobile_app_christian_phone
+        data:
+          title: Alarm OFF - Motion Detected
+          message: The alarm is OFF, however motion was detected, check camera.
+      - service: notify.mobile_app_felicia_phone
+        data:
+          message: The alarm is OFF, however motion was detected, check camera.
+          title: Alarm OFF - Motion Detected
+  mode: single
+- id: '1662233930602'
+  alias: 'Home Controller '
+  description: ''
+  use_blueprint:
+    path: frenck/zha-ikea-five-button-remote-for-lights.yaml
+    input:
+      remote: 5a072776392d9ab8712bacffdfcfe0a9
+      light:
+        entity_id:
+        - light.bedroom_lights
+        - light.living_room_lights
+        - light.bedroom_lights
+      button_left_short:
+      - service: input_boolean.toggle
+        data: {}
+        target:
+          entity_id: input_boolean.sleep_mode
+      button_left_long:
+      - service: light.turn_off
+        data: {}
+        target:
+          entity_id:
+          - light.window_tv
+          - light.cabinet
+          - light.medusa_lights
+      button_right_short:
+      - service: light.turn_off
+        data: {}
+        target:
+          entity_id:
+          - light.office_lights
+          - light.bedroom_lights
+      button_right_long:
+      - service: light.toggle
+        data: {}
+        target:
+          entity_id: light.living_room_lights
+- id: '1662292394539'
+  alias: Living Room - On - Level 1
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 130
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  condition:
+  - type: is_motion
+    condition: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+  - type: is_illuminance
+    condition: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 130
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id:
+      - light.cabinet
+      - light.floor
+      - light.window_sofa
+  mode: single
+- id: '1662292717259'
+  alias: Living Room - On - Level 2
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 60
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  - platform: numeric_state
+    entity_id: switch.adaptive_lighting_living_room
+    attribute: color_temp_kelvin
+    below: '2500'
+  condition:
+  - type: is_motion
+    condition: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+  - type: is_illuminance
+    condition: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    below: 70
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  - condition: or
+    conditions:
+    - type: is_illuminance
+      condition: device
+      device_id: cb663870e23eb5ab23f8e0039357a68e
+      entity_id: sensor.living_room_lightlevel_illuminance_lux
+      domain: sensor
+      below: 40
+    - condition: numeric_state
+      entity_id: switch.adaptive_lighting_living_room
+      below: 2500
+      attribute: color_temp_kelvin
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id:
+      - light.window_tv
+      - light.medusa_lights
+  mode: single
+- id: '1662292967411'
+  alias: Living Room - Off - Level 2
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 15
+      seconds: 0
+  - type: illuminance
+    platform: device
+    device_id: cb663870e23eb5ab23f8e0039357a68e
+    entity_id: sensor.living_room_lightlevel_illuminance_lux
+    domain: sensor
+    above: 90
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  - platform: numeric_state
+    entity_id: switch.adaptive_lighting_living_room
+    attribute: color_temp_kelvin
+    above: '2500'
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  - condition: device
+    device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
+    domain: media_player
+    entity_id: media_player.living_room_tv
+    type: is_off
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.medusa_lights
+      - light.window_tv
+  mode: single
+- id: '1664118597352'
+  alias: Front Door Open
+  description: ''
+  trigger:
+  - type: opened
+    platform: device
+    device_id: 7ab00e58565322136044e1773328f0f1
+    entity_id: binary_sensor.lumi_lumi_sensor_magnet_aq2_opening
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  condition: []
+  action:
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        title: Door Open
+        message: The front door is still open!
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: Door Open
+        message: The front door is still open!
+  mode: single
+- id: '1664119357734'
+  alias: Tag Door Larm Tag is scanned
+  description: ''
+  trigger:
+  - platform: tag
+    tag_id: 2d878be9-24d9-4b1d-953a-8dfd42568cbf
+  condition:
+  - condition: template
+    value_template: '{{ now() >= state_attr(''automation.tag_door_larm_tag_is_scanned'',''last_triggered'')|as_local
+      + timedelta(seconds=5) }}'
+  action:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.event.data.device_id == ""}}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: or
+            conditions:
+            - condition: state
+              entity_id: alarm_control_panel.alarmo
+              state: pending
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_armed_away
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_armed_home
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_triggered
+            - condition: state
+              entity_id: alarm_control_panel.alarmo
+              state: arming
+          sequence:
+          - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: disarm
+            code: ''
+        - conditions:
+          - condition: device
+            device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: is_disarmed
+          sequence:
+          - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: arm_away
+            code: ''
+          - service: notify.mobile_app_christian_phone
+            data:
+              title: Arming...
+              message: NFC tag scanned successful.
+        default:
+        - service: notify.mobile_app_christian_phone
+          data:
+            title: Alarm disarm/arm failed
+            message: Something went wrong when trying to disarm/arm!
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.event.data.device_id == ""}}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: or
+            conditions:
+            - condition: state
+              entity_id: alarm_control_panel.alarmo
+              state: pending
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_armed_away
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_armed_home
+            - condition: device
+              device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+              domain: alarm_control_panel
+              entity_id: alarm_control_panel.alarmo
+              type: is_triggered
+            - condition: state
+              entity_id: alarm_control_panel.alarmo
+              state: arming
+          sequence:
+          - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: disarm
+            code: ''
+        - conditions:
+          - condition: device
+            device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: is_disarmed
+          sequence:
+          - device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+            domain: alarm_control_panel
+            entity_id: alarm_control_panel.alarmo
+            type: arm_away
+            code: ''
+          - service: notify.mobile_app_felicia_phone
+            data:
+              title: Arming...
+              message: NFC tag scanned successful.
+        default:
+        - service: notify.mobile_app_felicia_phone
+          data:
+            title: Alarm disarm/arm failed
+            message: Something went wrong when trying to disarm/arm!
+    default:
+    - parallel:
+      - service: notify.mobile_app_christian_phone
+        data:
+          title: Alarm disarm/arm failed
+          message: '{{ trigger.event.data.device_id }} not found!'
+      - service: notify.mobile_app_felicia_phone
+        data:
+          title: Alarm disarm/arm failed
+          message: '{{ trigger.event.data.device_id }} not found!'
+  mode: single
+- &id001
+  id: '1664206133054'
+  alias: Alarmo - Pending
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - alarm_control_panel.alarmo
+    to: pending
+    from: armed_away
+  condition: []
+  action:
+  - service: tts.cloud_say
+    data:
+      entity_id:
+      - media_player.living_room
+      - media_player.office
+      - media_player.kitchen
+      - media_player.bedroom
+      message: Alarm is now pending, disarm to not trigger!
+      cache: true
+  mode: single
+- *id001
+- id: '1664206654218'
+  alias: Alarmo - Pending - Reminder
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - alarm_control_panel.alarmo
+    from: armed_away
+    to: pending
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 20
+  condition: []
+  action:
+  - service: tts.cloud_say
+    data:
+      entity_id:
+      - media_player.living_room
+      - media_player.office
+      - media_player.kitchen
+      - media_player.bedroom
+      message: Alarm is still pending, will trigger in 10 seconds!
+      cache: true
+  mode: single
+- id: '1666901750756'
+  alias: Aqara Magic Cube - Test
+  description: ''
+  use_blueprint:
+    path: rvaidya/aqara_magic_cube.yaml
+    input:
+      remote: 4c64be5cb81ad13f133a91b289d0f77b
+      active_face: input_number.cube_tracker
+      rotate_right:
+      - service: media_player.volume_up
+        data: {}
+        target:
+          device_id: 2a385c19b25953b43dffe44880ff01ed
+      rotate_left:
+      - service: media_player.volume_down
+        data: {}
+        target:
+          device_id: 2a385c19b25953b43dffe44880ff01ed
+      knock_any_side: true
+      cube_knock_any:
+      - service: media_player.media_play_pause
+        data: {}
+        target:
+          device_id: 2a385c19b25953b43dffe44880ff01ed
+      cube_flip_2:
+      - service: media_player.media_next_track
+        data: {}
+        target:
+          device_id: 2a385c19b25953b43dffe44880ff01ed
+      cube_flip_5:
+      - service: media_player.media_previous_track
+        data: {}
+        target:
+          device_id: 2a385c19b25953b43dffe44880ff01ed
+      flip_any: true
+      rotate_any_side: true
+- id: '1667758785234'
+  alias: Bedroom - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: b49c3d9f25e32c44009c95f593f445da
+    entity_id: binary_sensor.bedroom_motion_sensor_motion
+    domain: binary_sensor
+  condition:
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  action:
+  - type: turn_on
+    device_id: 57cb22226f25e8da36c50d65ed7d4014
+    entity_id: light.bedlight
+    domain: light
+  mode: single
+- id: '1667759187151'
+  alias: Bedlight - Off
+  description: ''
+  trigger:
+  - type: not_occupied
+    platform: device
+    device_id: b49c3d9f25e32c44009c95f593f445da
+    entity_id: binary_sensor.bedroom_motion_sensor_occupancy
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+  condition:
+  - condition: device
+    type: is_off
+    device_id: 2b696320dce0a3405934a2156375d6b8
+    entity_id: light.ceiling_bedroom
+    domain: light
+  action:
+  - type: turn_off
+    device_id: 57cb22226f25e8da36c50d65ed7d4014
+    entity_id: light.bedlight
+    domain: light
   mode: single

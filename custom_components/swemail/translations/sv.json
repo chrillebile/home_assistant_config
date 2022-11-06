@@ -1,0 +1,36 @@
+{
+  "title": "Svensk Postutdelning",
+  "config": {
+      "abort": {
+        "already_configured": "Det angivna postnummret finns redan"
+      },
+      "error": {
+        "invalid_postcode": "Det angivna postnummret är ogilltigt",
+        "creation_error": "Ett internt fel uppstod vid skapandet av konfigurationsobjektet"
+      },
+      "step": {
+        "user": {
+          "data": {
+            "postalcode": "Postnummer",
+            "postnord": "Aktivera kontroll hos Postnord",
+            "citymail": "Aktivera kontroll hos Citymail"
+          },
+          "title": "Svensk Postutdelning"
+        }
+      }
+    },
+    "options": {
+      "abort": {
+        "already_configured": "Det angivna postnummret finns redan"
+      },
+      "step": {
+        "user": {
+          "data": {
+            "postnord": "Aktivera kontroll hos Postnord",
+            "citymail": "Aktivera kontroll hos Citymail"
+          },
+          "title": "Svensk Postutdelning"
+        }
+      }
+    }
+  }

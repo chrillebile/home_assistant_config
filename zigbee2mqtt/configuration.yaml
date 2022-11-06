@@ -25,7 +25,7 @@ advanced:
     protocol: tcp4
     type: '5424'
   channel: 11
-permit_join: true
+permit_join: false
 devices:
   '0x00158d00057f9bcc':
     friendly_name: Hallway Climate
@@ -33,9 +33,11 @@ devices:
     friendly_name: Office Motion Sensor
   '0x54ef441000017fdc':
     friendly_name: Office Lightlevel
-  '0x54ef441000019983':
-    friendly_name: Living Room Lightlevel
-  '0xbc33acfffe1849cf':
-    friendly_name: Living Room Motion Sensor
   '0x04cd15fffe873ede':
     friendly_name: Bedroom Motion Sensor
+  '0xbc33acfffe1849cf':
+    friendly_name: Living Room Motion Sensor
+  '0x54ef441000019983':
+    friendly_name: Living Room Lightlevel
+  '0x0015bc001b021d1d':
+    friendly_name: Electricity Meter

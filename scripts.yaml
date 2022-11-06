@@ -18,31 +18,27 @@ send_love:
 camera_off:
   alias: Camera - Off
   sequence:
-  - service: tapo_control.set_privacy_mode
-    data:
-      privacy_mode: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
-  - service: tapo_control.set_led_mode
-    data:
-      led_mode: 'off'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - type: turn_on
+    device_id: 6af7a88d009637d36a125308d21def3a
+    entity_id: switch.office_camera_privacy
+    domain: switch
+  - type: turn_off
+    device_id: 6af7a88d009637d36a125308d21def3a
+    entity_id: switch.office_camera_indicator_led
+    domain: switch
   mode: single
   icon: mdi:cctv-off
 camera_on:
   alias: Camera - On
   sequence:
-  - service: tapo_control.set_led_mode
-    data:
-      led_mode: 'on'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
-  - service: tapo_control.set_privacy_mode
-    data:
-      privacy_mode: 'off'
-    target:
-      device_id: 6af7a88d009637d36a125308d21def3a
+  - type: turn_on
+    device_id: 6af7a88d009637d36a125308d21def3a
+    entity_id: switch.office_camera_indicator_led
+    domain: switch
+  - type: turn_off
+    device_id: 6af7a88d009637d36a125308d21def3a
+    entity_id: switch.office_camera_privacy
+    domain: switch
   mode: single
   icon: mdi:cctv
 alarm_triggered_clear:
@@ -64,7 +60,7 @@ arming_blink:
       entity_id:
       - switch.adaptive_lighting_adapt_color_bedroom
   - repeat:
-      count: '4'
+      count: '2'
       sequence:
       - service: light.toggle
         data:
@@ -75,8 +71,8 @@ arming_blink:
       - delay:
           hours: 0
           minutes: 0
-          seconds: 0
-          milliseconds: 500
+          seconds: 1
+          milliseconds: 0
   - service: switch.turn_on
     data: {}
     target:
@@ -90,7 +86,7 @@ armed_blink:
     target:
       entity_id: switch.adaptive_lighting_adapt_color_bedroom
   - repeat:
-      count: '4'
+      count: '2'
       sequence:
       - service: light.toggle
         data:
@@ -101,8 +97,8 @@ armed_blink:
       - delay:
           hours: 0
           minutes: 0
-          seconds: 0
-          milliseconds: 500
+          seconds: 1
+          milliseconds: 0
   - service: switch.turn_on
     data: {}
     target:
@@ -116,7 +112,7 @@ disarmed_blink:
     target:
       entity_id: switch.adaptive_lighting_adapt_color_bedroom
   - repeat:
-      count: '4'
+      count: '2'
       sequence:
       - service: light.toggle
         data:
@@ -127,8 +123,8 @@ disarmed_blink:
       - delay:
           hours: 0
           minutes: 0
-          seconds: 0
-          milliseconds: 500
+          seconds: 1
+          milliseconds: 0
   - service: switch.turn_on
     data: {}
     target:
@@ -168,7 +164,7 @@ triggered_blink:
       - delay:
           hours: 0
           minutes: 0
-          seconds: 0
+          seconds: 1
           milliseconds: 500
   - service: switch.turn_on
     data: {}
