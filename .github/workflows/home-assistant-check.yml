@@ -23,7 +23,7 @@ jobs:
       - name: Getting config from Github
         uses: actions/checkout@v3
       - name: Run Home Assistant Configuration Check
-        uses: frenck/action-home-assistant@v1.3
+        uses: frenck/action-home-assistant@v1.4
         with:
           secrets: ./.stubs/secrets.yaml
           version: "${{ matrix.version }}"
