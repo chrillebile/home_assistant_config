@@ -1,0 +1,7 @@
+---
+# This integration allows Home Assistant to retrieve see device power usage
+#
+# https://github.com/bramstroker/homeassistant-powercalc
+#
+powercalc:
+    enable_autodiscovery: true

@@ -3,7 +3,8 @@
   description: ''
   trigger:
   - platform: state
-    entity_id: input_boolean.in_call
+    entity_id:
+    - input_boolean.in_call
     from: 'on'
     to: 'off'
   condition:
@@ -13,17 +14,21 @@
   action:
   - service: media_player.media_play
     target:
-      entity_id: media_player.living_room
+      entity_id:
+      - media_player.beam
+    data: {}
   - service: timer.cancel
     target:
       entity_id: timer.music_dead
+    data: {}
   mode: single
 - id: '1577566320646'
   alias: Pause Music - Ring
   description: ''
   trigger:
   - platform: state
-    entity_id: input_boolean.in_call
+    entity_id:
+    - input_boolean.in_call
     from: 'off'
     to: 'on'
   condition:
@@ -52,16 +57,15 @@
   - choose:
     - conditions:
       - condition: device
-        device_id: 2a385c19b25953b43dffe44880ff01ed
+        device_id: 268697602f6c8bf8bf4e95a177c74339
         domain: media_player
-        entity_id: media_player.living_room
+        entity_id: media_player.beam
         type: is_playing
       sequence:
       - service: media_player.media_pause
         data: {}
         target:
-          entity_id:
-          - media_player.living_room
+          entity_id: media_player.beam
     - conditions:
       - condition: zone
         entity_id: person.christian
@@ -97,20 +101,31 @@
   - choose:
     - conditions:
       - condition: time
-        after: '23:29'
-        before: 06:29
+        after: '23:29:00'
+        before: 06:29:00
       sequence:
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.night_mode
+        data: {}
+      - type: turn_on
+        device_id: 268697602f6c8bf8bf4e95a177c74339
+        entity_id: switch.beam_night_sound
+        domain: switch
     default:
     - service: input_boolean.turn_off
       target:
         entity_id: input_boolean.night_mode
+      data: {}
     - service: switch.turn_off
       target:
         entity_id:
         - switch.adaptive_lighting_sleep_mode_kitchen
+      data: {}
+    - type: turn_off
+      device_id: 268697602f6c8bf8bf4e95a177c74339
+      entity_id: switch.beam_night_sound
+      domain: switch
   mode: single
 - id: '1618341675693'
   alias: Someone Home - On
@@ -120,10 +135,12 @@
     entity_id: person.christian
     zone: zone.home
     event: enter
+    id: christian_home
   - platform: zone
     entity_id: person.felicia
     zone: zone.home
     event: enter
+    id: felicia_home
   condition: []
   action:
   - service: input_boolean.turn_on
@@ -143,6 +160,123 @@
     then:
     - service: script.camera_off
       data: {}
+  - if:
+    - condition: device
+      device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+      domain: alarm_control_panel
+      entity_id: alarm_control_panel.alarmo
+      type: is_armed_away
+    then:
+    - wait_for_trigger:
+      - platform: device
+        device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+        domain: alarm_control_panel
+        entity_id: alarm_control_panel.alarmo
+        type: disarmed
+      continue_on_timeout: false
+      timeout:
+        hours: 0
+        minutes: 10
+        seconds: 0
+        milliseconds: 0
+  - alias: Set up variables for the actions
+    variables:
+      action_yes: '{{ ''YES_'' ~ context.id }}'
+      action_no: '{{ ''NO_'' ~ context.id }}'
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: christian_home
+      sequence:
+      - service: notify.mobile_app_christian_phone
+        data:
+          title: Welcome home Christian!
+          message: Do you want to play some music?
+          data:
+            actions:
+            - action: '{{ action_yes }}'
+              title: 'Yes'
+            - action: '{{ action_no }}'
+              title: 'No'
+    - conditions:
+      - condition: trigger
+        id: felicia_home
+      sequence:
+      - service: notify.mobile_app_felicia_phone
+        data:
+          title: Welcome home Felicia!
+          message: Do you want to play some music?
+          data:
+            actions:
+            - action: '{{ action_yes }}'
+              title: 'Yes'
+            - action: '{{ action_no }}'
+              title: 'No'
+    default:
+    - stop: For some reasson "someone_home" got turned on
+      error: true
+  - alias: Wait for a response
+    wait_for_trigger:
+    - platform: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: '{{ action_yes }}'
+    - platform: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: '{{ action_no }}'
+    timeout:
+      hours: 0
+      minutes: 10
+      seconds: 0
+      milliseconds: 0
+    continue_on_timeout: false
+  - alias: Perform the action
+    choose:
+    - conditions:
+      - '{{ wait.trigger.event.data.action == action_yes }}'
+      - condition: trigger
+        id: christian_home
+      sequence:
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.beam
+        data:
+          media_content_id: FV:2/15
+          media_content_type: favorite_item_id
+        metadata:
+          title: Randooom
+          thumbnail: https://i.scdn.co/image/ab67706c0000da84753408d4e0d5886a34d5dbc2
+          media_class: playlist
+          children_media_class:
+          navigateIds:
+          - {}
+          - media_content_type: favorites
+            media_content_id: ''
+          - media_content_type: favorites_folder
+            media_content_id: object.container.playlistContainer
+    - conditions:
+      - '{{ wait.trigger.event.data.action == action_yes }}'
+      - condition: trigger
+        id: felicia_home
+      sequence:
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.beam
+        data:
+          media_content_id: FV:2/16
+          media_content_type: favorite_item_id
+        metadata:
+          title: Felicias
+          thumbnail: https://mosaic.scdn.co/640/ab67616d0000b2731dca4592188de8cddc15e75bab67616d0000b273397c5043703520d71561064dab67616d0000b27349003c079a937eb5c697b783ab67616d0000b2734a052b99c042dc15f933145b
+          media_class: playlist
+          children_media_class:
+          navigateIds:
+          - {}
+          - media_content_type: favorites
+            media_content_id: ''
+          - media_content_type: favorites_folder
+            media_content_id: object.container.playlistContainer
   mode: single
 - id: '1618341855293'
   alias: Someone Home - Off
@@ -190,10 +324,12 @@
     target:
       entity_id:
       - switch.adaptive_lighting_sleep_mode_bedroom
-      - switch.adaptive_lighting_sleep_mode_kitchen
       - switch.adaptive_lighting_sleep_mode_living_room
       - switch.adaptive_lighting_sleep_mode_office
       - switch.adaptive_lighting_sleep_mode_closet
+      - switch.adaptive_lighting_sleep_mode_bedlight
+      - switch.adaptive_lighting_sleep_mode_kitchen
+      - switch.adaptive_lighting_sleep_mode_hallway
     data: {}
   - service: input_boolean.turn_off
     target:
@@ -213,11 +349,13 @@
   - service: switch.turn_on
     target:
       entity_id:
-      - switch.adaptive_lighting_sleep_mode_kitchen
       - switch.adaptive_lighting_sleep_mode_living_room
       - switch.adaptive_lighting_sleep_mode_bedroom
       - switch.adaptive_lighting_sleep_mode_office
       - switch.adaptive_lighting_sleep_mode_closet
+      - switch.adaptive_lighting_sleep_mode_bedlight
+      - switch.adaptive_lighting_sleep_mode_kitchen
+      - switch.adaptive_lighting_sleep_mode_hallway
     data: {}
   - service: input_boolean.turn_on
     target:
@@ -267,15 +405,16 @@
     type: playing
   condition:
   - condition: device
-    device_id: 2a385c19b25953b43dffe44880ff01ed
+    device_id: 268697602f6c8bf8bf4e95a177c74339
     domain: media_player
-    entity_id: media_player.living_room
+    entity_id: media_player.beam
     type: is_playing
   action:
   - service: media_player.media_pause
     data: {}
     target:
-      entity_id: media_player.living_room
+      entity_id:
+      - media_player.bedroom_speaker
   mode: single
 - id: '1626800108204'
   alias: In Call - Christian
@@ -340,14 +479,14 @@
   description: ''
   trigger:
   - platform: device
-    device_id: 4bdf051aaa818b21fe2f85cdfc04629c
+    device_id: 268697602f6c8bf8bf4e95a177c74339
     domain: media_player
-    entity_id: media_player.kitchen
+    entity_id: media_player.beam
     type: paused
   - platform: device
     device_id: 2a385c19b25953b43dffe44880ff01ed
     domain: media_player
-    entity_id: media_player.living_room
+    entity_id: media_player.kitchen
     type: paused
   condition: []
   action:
@@ -449,50 +588,8 @@
   - service: tts.cloud_say
     data:
       cache: true
-      entity_id:
-      - media_player.living_room
-      - media_player.office
-      - media_player.bedroom
-      - media_player.kitchen
+      entity_id: media_player.beam,media_player.office,media_player.bedroom_speaker,media_player.kitchen
       message: The alarm is triggered and you have been recorded!
-  mode: single
-- id: '1648729198501'
-  alias: Alarmo - Armed
-  description: ''
-  trigger:
-  - platform: device
-    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
-    domain: alarm_control_panel
-    entity_id: alarm_control_panel.alarmo
-    type: armed_away
-  - platform: device
-    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
-    domain: alarm_control_panel
-    entity_id: alarm_control_panel.alarmo
-    type: armed_home
-  condition: []
-  action:
-  - device_id: 6af7a88d009637d36a125308d21def3a
-    domain: select
-    entity_id: select.office_camera_automatic_alarm
-    type: select_option
-    option: both
-  - choose:
-    - conditions:
-      - condition: device
-        device_id: 784b56f01031f27c84c6a0673e82702a
-        domain: vacuum
-        entity_id: vacuum.dusty
-        type: is_docked
-      sequence:
-      - device_id: 6af7a88d009637d36a125308d21def3a
-        domain: select
-        entity_id: select.office_camera_motion_detection
-        type: select_option
-        option: normal
-    default: []
-  - service: script.armed_blink
-    data: {}
   mode: single
 - id: '1648729286615'
   alias: Alarmo - Disarmed
@@ -506,22 +603,25 @@
   condition: []
   action:
   - device_id: 6af7a88d009637d36a125308d21def3a
-    domain: select
-    entity_id: select.office_camera_automatic_alarm
-    type: select_option
-    option: 'off'
-  - device_id: 6af7a88d009637d36a125308d21def3a
-    domain: select
-    entity_id: select.office_camera_motion_detection
-    type: select_option
-    option: 'off'
-  - condition: state
-    entity_id: timer.larm_triggered
-    state: idle
-  - service: script.camera_off
-    data: {}
-  - service: script.disarmed_blink
-    data: {}
+    domain: button
+    entity_id: button.office_camera_manual_alarm_stop
+    type: press
+  - if:
+    - condition: state
+      entity_id: timer.larm_triggered
+      state: idle
+    then:
+    - service: script.camera_off
+      data: {}
+  - if:
+    - condition: state
+      entity_id: input_boolean.someone_home
+      state: 'on'
+    then:
+    - service: light.turn_on
+      data: {}
+      target:
+        entity_id: light.hallway_dimmer_light
   mode: single
 - id: '1648729657211'
   alias: Alarmo - Arming
@@ -536,8 +636,23 @@
   action:
   - service: script.camera_on
     data: {}
-  - service: script.arming_blink
-    data: {}
+  - if:
+    - condition: template
+      value_template: '{{ trigger.to_state.attributes.arm_mode == "armed_away" }}'
+    then:
+    - service: light.turn_off
+      data: {}
+      target:
+        area_id:
+        - 72f600fc787e479eaf6ce20ac1df415b
+        - e4cd392f3436439681504b0610b28b1d
+        entity_id:
+        - light.living_room_lights
+        - light.office_lights
+        - light.christian_desk
+        - light.felicia_desk
+        - light.kitchen_dimmer_light
+        - light.hallway_dimmer_light
   mode: single
 - id: '1648743916464'
   alias: Alarmo - Triggered
@@ -554,6 +669,10 @@
     data: {}
     target:
       entity_id: timer.larm_triggered
+  - device_id: 6af7a88d009637d36a125308d21def3a
+    domain: button
+    entity_id: button.office_camera_manual_alarm_start
+    type: press
   - service: script.triggered_blink
     data: {}
   mode: single
@@ -621,6 +740,13 @@
     entity_id: alarm_control_panel.alarmo
     type: arm_home
     code: ''
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.office_lights
+      - light.living_room_lights
+      - light.bedroom_lights
   mode: single
 - id: '1654179275456'
   alias: Arm Home - Off
@@ -669,12 +795,12 @@
     to: 'on'
   condition: []
   action:
-  - service: xiaomi_miio.vacuum_goto
+  - service: roborock.vacuum_goto
     data:
-      y_coord: '22500'
       x_coord: '26300'
+      y_coord: '22500'
     target:
-      device_id: 784b56f01031f27c84c6a0673e82702a
+      entity_id: vacuum.dusty
   mode: single
 - id: '1654977715113'
   alias: Vacuum Service - Off
@@ -685,17 +811,9 @@
     - input_boolean.vacuum_service
     from: 'on'
     to: 'off'
-  condition:
-  - condition: or
-    conditions:
-    - condition: state
-      entity_id: vacuum.dusty
-      state: idle
-    - condition: state
-      entity_id: vacuum.dusty
-      state: cleaning
+  condition: []
   action:
-  - device_id: 784b56f01031f27c84c6a0673e82702a
+  - device_id: 66db867a17f79c33d9a83be93b2c39e2
     domain: vacuum
     entity_id: vacuum.dusty
     type: dock
@@ -705,7 +823,7 @@
   description: ''
   trigger:
   - platform: device
-    device_id: 784b56f01031f27c84c6a0673e82702a
+    device_id: 66db867a17f79c33d9a83be93b2c39e2
     domain: vacuum
     entity_id: vacuum.dusty
     type: docked
@@ -741,12 +859,12 @@
   description: ''
   trigger:
   - platform: device
-    device_id: 784b56f01031f27c84c6a0673e82702a
+    device_id: 66db867a17f79c33d9a83be93b2c39e2
     domain: vacuum
     entity_id: vacuum.dusty
     type: cleaning
   - platform: device
-    device_id: 784b56f01031f27c84c6a0673e82702a
+    device_id: 66db867a17f79c33d9a83be93b2c39e2
     domain: vacuum
     entity_id: vacuum.dusty
     type: docked
@@ -767,7 +885,7 @@
   - choose:
     - conditions:
       - condition: device
-        device_id: 784b56f01031f27c84c6a0673e82702a
+        device_id: 66db867a17f79c33d9a83be93b2c39e2
         domain: vacuum
         entity_id: vacuum.dusty
         type: is_cleaning
@@ -779,7 +897,7 @@
         option: 'off'
     - conditions:
       - condition: device
-        device_id: 784b56f01031f27c84c6a0673e82702a
+        device_id: 66db867a17f79c33d9a83be93b2c39e2
         domain: vacuum
         entity_id: vacuum.dusty
         type: is_docked
@@ -810,6 +928,10 @@
       hours: 0
       minutes: 0
       seconds: 30
+  - platform: state
+    entity_id:
+    - timer.workday
+    to: active
   condition:
   - type: is_illuminance
     condition: device
@@ -822,6 +944,17 @@
     data: {}
     target:
       entity_id: light.office_lights
+  - if:
+    - condition: state
+      entity_id: timer.workday
+      state: active
+    then:
+    - service: light.turn_on
+      data: {}
+      target:
+        entity_id:
+        - light.christian_desk
+        - light.felicia_desk
   mode: single
 - id: '1660498070636'
   alias: Office - Off
@@ -846,7 +979,19 @@
       hours: 0
       minutes: 0
       seconds: 30
-  condition: []
+  - platform: state
+    entity_id:
+    - timer.workday
+    to: idle
+  condition:
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: timer.workday
+      state: idle
+    - condition: state
+      entity_id: timer.workday
+      state: paused
   action:
   - service: light.turn_off
     data: {}
@@ -879,7 +1024,11 @@
       device_id: b49c3d9f25e32c44009c95f593f445da
       entity_id: binary_sensor.bedroom_motion_sensor_motion
       domain: binary_sensor
-    timeout: '300'
+    timeout:
+      hours: 0
+      minutes: 5
+      seconds: 0
+      milliseconds: 0
     continue_on_timeout: false
   - service: light.turn_on
     data: {}
@@ -913,7 +1062,7 @@
         message: 'Home is using more power than usual '
   mode: single
 - id: '1661160311856'
-  alias: Home - off
+  alias: Home - Off
   description: ''
   trigger:
   - platform: state
@@ -935,6 +1084,10 @@
       - light.office_lights
       - light.bedroom_lights
       - light.living_room_lights
+      - light.closet
+      - light.kitchen_dimmer_light
+      - light.hallway_dimmer_light
+      - light.hallway_door_dimmer_light
   - if:
     - condition: numeric_state
       entity_id: sensor.electricity_meter_smartenergymetering
@@ -952,10 +1105,10 @@
     data: {}
     target:
       entity_id:
-      - media_player.living_room
       - media_player.office
       - media_player.kitchen
-      - media_player.bedroom
+      - media_player.beam
+      - media_player.bedroom_speaker
   - if:
     - condition: device
       device_id: d545f28ac62c0ccbde8daa21a2ebe1c4
@@ -1138,6 +1291,11 @@
     platform: device
     device_id: db06330462a9c0236cf4942a2bf2f843
     entity_id: binary_sensor.office_motion_sensor_motion
+    domain: binary_sensor
+  - type: occupied
+    platform: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: binary_sensor.kitchen_motion_sensor_occupancy
     domain: binary_sensor
   condition:
   - condition: device
@@ -1360,7 +1518,7 @@
       - light.window_tv
   mode: single
 - id: '1664118597352'
-  alias: Front Door Open
+  alias: Front Door Reminder
   description: ''
   trigger:
   - type: opened
@@ -1519,8 +1677,7 @@
           title: Alarm disarm/arm failed
           message: '{{ trigger.event.data.device_id }} not found!'
   mode: single
-- &id001
-  id: '1664206133054'
+- id: '1664206133054'
   alias: Alarmo - Pending
   description: ''
   trigger:
@@ -1534,14 +1691,13 @@
   - service: tts.cloud_say
     data:
       entity_id:
-      - media_player.living_room
+      - media_player.beam
       - media_player.office
       - media_player.kitchen
-      - media_player.bedroom
+      - media_player.bedroom_speaker
       message: Alarm is now pending, disarm to not trigger!
       cache: true
   mode: single
-- *id001
 - id: '1664206654218'
   alias: Alarmo - Pending - Reminder
   description: ''
@@ -1560,10 +1716,10 @@
   - service: tts.cloud_say
     data:
       entity_id:
-      - media_player.living_room
+      - media_player.beam
       - media_player.office
       - media_player.kitchen
-      - media_player.bedroom
+      - media_player.bedroom_speaker
       message: Alarm is still pending, will trigger in 10 seconds!
       cache: true
   mode: single
@@ -1607,15 +1763,34 @@
   alias: Bedroom - On
   description: ''
   trigger:
-  - type: motion
+  - type: occupied
     platform: device
     device_id: b49c3d9f25e32c44009c95f593f445da
-    entity_id: binary_sensor.bedroom_motion_sensor_motion
+    entity_id: binary_sensor.bedroom_motion_sensor_occupancy
     domain: binary_sensor
   condition:
   - condition: state
     entity_id: input_boolean.night_mode
     state: 'off'
+  - condition: state
+    entity_id: input_boolean.sleep_mode
+    state: 'off'
+  - condition: or
+    conditions:
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: binary_sensor.workday_sensor
+        state: 'on'
+      - condition: time
+        after: 07:15:00
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: binary_sensor.workday_sensor
+        state: 'off'
+      - condition: time
+        after: 09:30:00
   action:
   - type: turn_on
     device_id: 57cb22226f25e8da36c50d65ed7d4014
@@ -1626,15 +1801,15 @@
   alias: Bedlight - Off
   description: ''
   trigger:
-  - type: not_occupied
+  - type: no_motion
     platform: device
     device_id: b49c3d9f25e32c44009c95f593f445da
-    entity_id: binary_sensor.bedroom_motion_sensor_occupancy
+    entity_id: binary_sensor.bedroom_motion_sensor_motion
     domain: binary_sensor
     for:
       hours: 0
       minutes: 0
-      seconds: 0
+      seconds: 10
   condition:
   - condition: device
     type: is_off
@@ -1646,4 +1821,880 @@
     device_id: 57cb22226f25e8da36c50d65ed7d4014
     entity_id: light.bedlight
     domain: light
+  mode: single
+- id: '1667804444819'
+  alias: Home - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    from: 'off'
+    to: 'on'
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: disarmed
+  condition: []
+  action:
+  - type: turn_on
+    device_id: 3251c078e207c59c95523d5058aa4869
+    entity_id: light.closet
+    domain: light
+  mode: single
+- id: '1668337906719'
+  alias: Fridge Warning
+  description: ''
+  trigger:
+  - type: temperature
+    platform: device
+    device_id: a72f35e6544aac37d9fde4b0ba237a09
+    entity_id: sensor.lumi_lumi_weather_temperature_2
+    domain: sensor
+    above: 11
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+  condition: []
+  action:
+  - parallel:
+    - service: notify.mobile_app_christian_phone
+      data:
+        message: Fridge might still be open
+        title: Fridge Warm
+    - service: notify.mobile_app_felicia_phone
+      data:
+        message: Fridge might still be open
+        title: Fridge Warm
+  mode: single
+- id: '1668701393623'
+  alias: Workday On - Reminder
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: db06330462a9c0236cf4942a2bf2f843
+    entity_id: binary_sensor.office_motion_sensor_motion
+    domain: binary_sensor
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+  condition:
+  - condition: state
+    entity_id: timer.workday
+    state: active
+  action:
+  - if:
+    - condition: state
+      entity_id: person.felicia
+      state: home
+    then:
+    - service: notify.mobile_app_felicia_phone
+      data:
+        title: Still working?
+        message: Don't forget to turn off workday if you are not working anymore.
+  - if:
+    - condition: state
+      entity_id: person.christian
+      state: home
+    then:
+    - service: notify.mobile_app_christian_phone
+      data:
+        message: Don't forget to turn off workday if you are not working anymore.
+        title: Still working?
+  mode: single
+- id: '1668963975889'
+  alias: Christmas Lights - On
+  description: ''
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: 0
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'on'
+  - condition: sun
+    after: sunset
+    before: sunrise
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id:
+      - light.adventsstjarna_left
+      - light.adventsstjarna_right_3
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adventsljusstake
+  mode: single
+- id: '1668964233189'
+  alias: Christmas Lights - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    to: 'off'
+  condition: []
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.adventsstjarna_left
+      - light.adventsstjarna_right_3
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.adventsljusstake
+  mode: single
+- id: '1669047206489'
+  alias: Manual Mode
+  description: ''
+  trigger: []
+  condition: []
+  action:
+  - service: automation.toggle
+    data: {}
+    target:
+      entity_id:
+      - automation.living_room_off_level_2
+      - automation.living_room_on_level_1
+      - automation.living_room_on_level_2
+      - automation.living_room_light_off
+      - automation.office_off
+      - automation.office_on
+      - automation.bedlight_off
+      - automation.bedroom_off
+      - automation.bedroom_on_2
+  mode: single
+- id: '1669047839006'
+  alias: Movie Night - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.movie_night
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: automation.turn_off
+    data: {}
+    target:
+      entity_id:
+      - automation.living_room_on_level_1
+      - automation.living_room_on_level_2
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.living_room_lights
+  mode: single
+- id: '1669048059355'
+  alias: Movie Night - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.movie_night
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - service: automation.turn_on
+    data: {}
+    target:
+      entity_id:
+      - automation.living_room_on_level_1
+      - automation.living_room_on_level_2
+  - service: automation.trigger
+    data:
+      skip_condition: false
+    target:
+      entity_id:
+      - automation.living_room_on_level_1
+      - automation.living_room_on_level_2
+  mode: single
+- id: '1669048204678'
+  alias: TV - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - media_player.living_room_tv
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - service: input_boolean.turn_off
+    data: {}
+    target:
+      entity_id: input_boolean.movie_night
+  - service: media_player.volume_set
+    data:
+      volume_level: 0.11
+    target:
+      entity_id: media_player.beam
+  - if:
+    - condition: time
+      after: '21:00:00'
+      before: 08:00:00
+    then:
+    - alias: Set up variables for the actions
+      variables:
+        action_yes: '{{ ''YES_'' ~ context.id }}'
+        action_no: '{{ ''NO_'' ~ context.id }}'
+        action_jazz: '{{ ''JAZZ_'' ~ context.id }}'
+    - choose:
+      - conditions:
+        - condition: state
+          entity_id: person.christian
+          state: home
+        - condition: not
+          conditions:
+          - condition: state
+            entity_id: media_player.spotify_christian_bilevits
+            state: playing
+        sequence:
+        - service: notify.mobile_app_christian_phone
+          data:
+            title: TV turned off
+            message: Do you want to play music?
+            data:
+              actions:
+              - action: '{{ action_yes }}'
+                title: 'Yes'
+              - action: '{{ action_no }}'
+                title: 'No'
+              - action: '{{ action_jazz }}'
+                title: Jazz
+    - choose:
+      - conditions:
+        - condition: state
+          entity_id: person.felicia
+          state: home
+        - condition: not
+          conditions:
+          - condition: state
+            entity_id: media_player.spotify_felicias
+            state: playing
+        sequence:
+        - service: notify.mobile_app_felicia_phone
+          data:
+            title: TV turned off
+            message: Do you want to play music?
+            data:
+              actions:
+              - action: '{{ action_yes }}'
+                title: 'Yes'
+              - action: '{{ action_no }}'
+                title: 'No'
+              - action: '{{ action_jazz }}'
+                title: Jazz
+    - alias: Wait for a response
+      wait_for_trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: '{{ action_yes }}'
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: '{{ action_no }}'
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: '{{ action_jazz }}'
+      timeout:
+        hours: 0
+        minutes: 3
+        seconds: 0
+        milliseconds: 0
+      continue_on_timeout: false
+    - alias: Perform the action
+      choose:
+      - conditions: '{{ wait.trigger.event.data.action == action_yes }}'
+        sequence:
+        - service: media_player.media_play
+          data: {}
+          target:
+            entity_id:
+            - media_player.kitchen
+            - media_player.office
+            - media_player.bedroom_speaker
+        - service: media_player.volume_set
+          data:
+            volume_level: 0.06
+          target:
+            entity_id:
+            - media_player.beam
+            - media_player.bedroom_speaker
+            - media_player.kitchen
+            - media_player.office
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 1
+            milliseconds: 0
+        - service: media_player.join
+          data:
+            group_members:
+            - media_player.beam
+          target:
+            entity_id:
+            - media_player.bedroom_speaker
+      - conditions: '{{ wait.trigger.event.data.action == action_jazz }}'
+        sequence:
+        - service: media_player.volume_set
+          data:
+            volume_level: 0.06
+          target:
+            entity_id:
+            - media_player.beam
+            - media_player.bedroom_speaker
+            - media_player.kitchen
+            - media_player.office
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 1
+            milliseconds: 0
+        - service: media_player.join
+          data:
+            group_members:
+            - media_player.beam
+          target:
+            entity_id:
+            - media_player.bedroom_speaker
+        - service: media_player.play_media
+          target:
+            entity_id: media_player.bedroom_speaker
+          data:
+            media_content_id: spotify://db80aca4fa5211ea91a747b5808bbca6/spotify:playlist:37i9dQZF1DX4wta20PHgwo
+            media_content_type: spotify://playlist
+          metadata:
+            title: Late Night Jazz
+            thumbnail: https://i.scdn.co/image/ab67706f00000003987367cd09caff68b5fa34ec
+            media_class: playlist
+            children_media_class: track
+            navigateIds:
+            - {}
+            - media_content_type: spotify://library
+              media_content_id: spotify://db80aca4fa5211ea91a747b5808bbca6
+            - media_content_type: spotify://current_user_playlists
+              media_content_id: spotify://db80aca4fa5211ea91a747b5808bbca6/current_user_playlists
+    else:
+    - service: media_player.media_play
+      data: {}
+      target:
+        entity_id:
+        - media_player.kitchen
+        - media_player.office
+        - media_player.bedroom_speaker
+    - service: media_player.volume_set
+      data:
+        volume_level: 0.11
+      target:
+        entity_id:
+        - media_player.beam
+        - media_player.bedroom_speaker
+        - media_player.kitchen
+        - media_player.office
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 1
+        milliseconds: 0
+    - service: media_player.join
+      data:
+        group_members:
+        - media_player.beam
+      target:
+        entity_id:
+        - media_player.bedroom_speaker
+  mode: single
+- id: '1671310192118'
+  alias: Guest Mode - On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.guest_mode
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_living_room
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_living_room_guest
+  mode: single
+- id: '1671310265720'
+  alias: Guest Mode - Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.guest_mode
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_living_room_guest
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.adaptive_lighting_living_room
+  mode: single
+- id: '1671399846772'
+  alias: Festives Sleep
+  description: ''
+  trigger:
+  - type: no_motion
+    platform: device
+    device_id: 1676fc84015df0dfd79488157a70b6c1
+    entity_id: binary_sensor.living_room_motion_sensor_motion
+    domain: binary_sensor
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+  condition:
+  - condition: and
+    conditions:
+    - condition: state
+      state: 'on'
+      entity_id: input_boolean.sleep_mode
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.adventsstjarna_right_3
+      - light.adventsstjarna_left
+      - light.adventsljusstake
+  mode: single
+- id: '1673046658318'
+  alias: Teest
+  description: ''
+  trigger: []
+  condition: []
+  action:
+  - alias: Set up variables for the actions
+    variables:
+      action_open: '{{ ''OPEN_'' ~ context.id }}'
+      action_close: '{{ ''CLOSE_'' ~ context.id }}'
+  - service: notify.mobile_app_christian_phone
+    data:
+      message: The blinds are half-open. Do you want to adjust this?
+      data:
+        actions:
+        - action: '{{ action_open }}'
+          title: Open
+        - action: '{{ action_close }}'
+          title: Close
+  - alias: Wait for a response
+    wait_for_trigger:
+    - platform: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: '{{ action_open }}'
+    - platform: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: '{{ action_close }}'
+  - alias: Perform the action
+    choose:
+    - conditions: '{{ wait.trigger.event.data.action == action_open }}'
+      sequence:
+      - service: light.toggle
+        data: {}
+        target:
+          entity_id: light.bed_christian
+    - conditions: '{{ wait.trigger.event.data.action == action_close }}'
+      sequence:
+      - service: light.toggle
+        data: {}
+        target:
+          entity_id: light.bed_felicia
+  mode: single
+- id: '1673386869885'
+  alias: Sync On Brightness
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.adaptive_lighting_kitchen
+    attribute: brightness_pct
+    id: kitchen_change
+  - platform: state
+    entity_id:
+    - switch.adaptive_lighting_hallway
+    attribute: brightness_pct
+    id: hallway_change
+  condition: []
+  action:
+  - parallel:
+    - if:
+      - condition: trigger
+        id: kitchen_change
+      then:
+      - service: number.set_value
+        data:
+          value: '{{ (trigger.to_state.attributes.brightness_pct / 100) * 255 }}'
+        target:
+          entity_id: number.kitchen_dimmer_on_level
+    - if:
+      - condition: trigger
+        id: hallway_change
+      then:
+      - service: number.set_value
+        data:
+          value: '{{ (trigger.to_state.attributes.brightness_pct / 100) * 255 }}'
+        target:
+          entity_id:
+          - number.hallway_dimmer_on_level
+          - number.hallway_door_dimmer_on_level
+  mode: queued
+  max: 2
+- id: '1673650639545'
+  alias: Front Door - Open
+  description: ''
+  trigger:
+  - type: opened
+    platform: device
+    device_id: 7ab00e58565322136044e1773328f0f1
+    entity_id: binary_sensor.lumi_lumi_sensor_magnet_aq2_opening
+    domain: binary_sensor
+  condition: []
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id: light.hallway_door_dimmer_light
+  mode: single
+- id: '1674311864920'
+  alias: Hallway - Off
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_on
+    device_id: a41bee96064e8038a92acb0187cdda54
+    entity_id: light.hallway_door_dimmer_light
+    domain: light
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+  - platform: device
+    type: turned_on
+    device_id: c593d1d670130c0ae90fda27e4fca939
+    entity_id: light.hallway_dimmer_light
+    domain: light
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id:
+      - light.hallway_dimmer_light
+      - light.hallway_door_dimmer_light
+  mode: single
+- id: '1674311936454'
+  alias: Kitchen - Off
+  description: ''
+  trigger:
+  - type: not_occupied
+    platform: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: binary_sensor.kitchen_motion_sensor_occupancy
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  condition:
+  - condition: state
+    entity_id: input_boolean.guest_mode
+    state: 'off'
+  action:
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id: light.kitchen_dimmer_light
+  mode: single
+- id: '1675013744645'
+  alias: Force Off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - light.bed_christian
+    - light.bed_felicia
+    - light.bedlight
+    - light.cabinet
+    - light.ceiling_bedroom
+    - light.office_ceiling_christian
+    - light.office_ceiling_felicia
+    - light.office_ceiling_middle
+    - light.christian_desk
+    - light.closet
+    - light.felicia_desk
+    - light.floor
+    - light.hallway_dimmer_light
+    - light.hallway_door_dimmer_light
+    - light.kitchen_dimmer_light
+    - light.medusa_1
+    - light.medusa_2
+    - light.medusa_3
+    - light.medusa_4
+    - light.medusa_5
+    - light.window_sofa
+    - light.window_tv
+    from: 'on'
+    to: 'off'
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+  condition: []
+  action:
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 2
+      milliseconds: 0
+  - service: light.turn_off
+    data: {}
+    target:
+      entity_id: '{{ trigger.entity_id }}'
+  mode: parallel
+  max: 50
+- id: '1676475481250'
+  alias: Low battery level detection & notification for all battery sensors
+  description: ''
+  use_blueprint:
+    path: sbyx/low-battery-level-detection-notification-for-all-battery-sensors.yaml
+    input:
+      time: '17:00:00'
+      actions:
+      - service: notify.mobile_app_christian_phone
+        data:
+          title: Low Battary
+          message:
+            '[object Object]':
+      threshold: 20
+      exclude:
+        entity_id:
+        - sensor.ac2003_battery_level
+        - sensor.pixel_7_pro_battery_level
+- id: '1676897576701'
+  alias: Kitchen - On
+  description: ''
+  trigger:
+  - type: occupied
+    platform: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: binary_sensor.kitchen_motion_sensor_occupancy
+    domain: binary_sensor
+  - type: illuminance
+    platform: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: sensor.kitchen_motion_sensor_illuminance
+    domain: sensor
+    below: 150
+  condition:
+  - type: is_occupied
+    condition: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: binary_sensor.kitchen_motion_sensor_occupancy
+    domain: binary_sensor
+  - type: is_illuminance
+    condition: device
+    device_id: 1729c78b74f5c647e40b93507b5a051d
+    entity_id: sensor.kitchen_motion_sensor_illuminance
+    domain: sensor
+    below: 150
+  - condition: state
+    entity_id: input_boolean.night_mode
+    state: 'off'
+  action:
+  - service: light.turn_on
+    data: {}
+    target:
+      entity_id: light.kitchen_dimmer_light
+  mode: single
+- id: '1676904208732'
+  alias: Workday - On
+  description: ''
+  trigger:
+  - device_id: 47ad53454bb2929cd9ab5669fcb7687a
+    domain: zha
+    platform: device
+    type: remote_button_short_press
+    subtype: turn_on
+  condition:
+  - condition: state
+    entity_id: timer.workday
+    state: idle
+  action:
+  - service: timer.start
+    data: {}
+    target:
+      entity_id: timer.workday
+  mode: single
+- id: '1676904264827'
+  alias: Workday - Off
+  description: ''
+  trigger:
+  - device_id: 47ad53454bb2929cd9ab5669fcb7687a
+    domain: zha
+    platform: device
+    type: remote_button_double_press
+    subtype: turn_on
+  condition: []
+  action:
+  - service: timer.cancel
+    data: {}
+    target:
+      entity_id: timer.workday
+  mode: single
+- id: '1679739549668'
+  alias: Toothbrush Running
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.io_series_6_7_db87_toothbrush_state
+    to: running
+  condition:
+  - condition: time
+    after: '21:00:00'
+    before: 05:00:00
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    - sat
+    - sun
+  action:
+  - service: input_boolean.turn_on
+    data: {}
+    target:
+      entity_id: input_boolean.sleep_mode
+  mode: single
+- id: '1681114490010'
+  alias: Auto Clean
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.someone_home
+    to: 'off'
+  - platform: time
+    at: 08:00:00
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: armed_away
+  condition:
+  - condition: state
+    entity_id: input_boolean.someone_home
+    state: 'off'
+  - condition: time
+    after: 08:00:00
+    before: '20:30:00'
+  - condition: template
+    value_template: '{{ now().timestamp() >= (state_attr(''input_datetime.vacuum_date'',
+      ''timestamp'')|int) }}'
+  - condition: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: alarm_control_panel.alarmo
+    type: is_armed_away
+  action:
+  - if:
+    - condition: numeric_state
+      entity_id: counter.vacuum_counter
+      above: 1
+    then:
+    - service: roborock.vacuum_set_mop_intensity
+      data:
+        mop_intensity: moderate
+      target:
+        entity_id: vacuum.dusty
+    - service: roborock.vacuum_set_fan_speed
+      data:
+        fan_speed: max
+      target:
+        entity_id: vacuum.dusty
+    - service: counter.reset
+      data: {}
+      target:
+        entity_id: counter.vacuum_counter
+    else:
+    - service: roborock.vacuum_set_mop_intensity
+      data:
+        mop_intensity: custom
+      target:
+        entity_id: vacuum.dusty
+    - service: roborock.vacuum_set_fan_speed
+      data:
+        fan_speed: custom
+      target:
+        entity_id: vacuum.dusty
+    - service: counter.increment
+      data: {}
+      target:
+        entity_id: counter.vacuum_counter
+  - service: roborock.vacuum_clean_segment
+    data:
+      segments:
+      - 19
+      - 18
+      - 16
+      - 21
+      - 20
+    target:
+      entity_id: vacuum.dusty
+  - service: input_datetime.set_datetime
+    data:
+      date: '{{ (now().date() + timedelta(days=2)).strftime(''%Y-%m-%d'') }}'
+    target:
+      entity_id: input_datetime.vacuum_date
+  - service: notify.mobile_app_christian_phone
+    data:
+      message: 'Vacuum has started cleaning '
+      title: "\U0001F9F9"
+  - service: notify.mobile_app_felicia_phone
+    data:
+      title: "\U0001F9F9"
+      message: Vacuum has started cleaning
   mode: single

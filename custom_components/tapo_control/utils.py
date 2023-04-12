@@ -1,10 +1,17 @@
 import asyncio
 import datetime
+import hashlib
+import pathlib
 import onvif
 import os
+import shutil
 import socket
 import time
 import urllib.parse
+import uuid
+from homeassistant.core import HomeAssistant
+from pytapo.media_stream.downloader import Downloader
+from homeassistant.components.media_source.error import Unresolvable
 
 from haffmpeg.tools import IMAGE_JPEG, ImageFrame
 from onvif import ONVIFCamera
@@ -18,13 +25,17 @@ from homeassistant.util import slugify
 
 from .const import (
     BRAND,
+    COLD_DIR_DELETE_TIME,
     ENABLE_MOTION_SENSOR,
     DOMAIN,
+    HOT_DIR_DELETE_TIME,
     LOGGER,
     CLOUD_PASSWORD,
     ENABLE_TIME_SYNC,
     CONF_CUSTOM_STREAM,
 )
+
+UUID = uuid.uuid4().hex
 
 
 def getStreamSource(entry, hdStream):
@@ -45,8 +56,10 @@ def getStreamSource(entry, hdStream):
     return streamURL
 
 
-def registerController(host, username, password):
-    return Tapo(host, username, password)
+def registerController(
+    host, username, password, password_cloud="", super_secret_key="", device_id=None
+):
+    return Tapo(host, username, password, password_cloud, super_secret_key, device_id)
 
 
 def isOpen(ip, port):
@@ -58,6 +71,113 @@ def isOpen(ip, port):
         return True
     except Exception:
         return False
+
+
+def getColdDirPathForEntry(entry_id):
+    return f"./.storage/{DOMAIN}/{entry_id}/"
+
+
+def getHotDirPathForEntry(entry_id):
+    return f"./www/{DOMAIN}/{entry_id}/"
+
+
+def mediaCleanup(hass, entry_id):
+    LOGGER.debug("Initiating media cleanup for entity " + entry_id + "...")
+    hass.data[DOMAIN][entry_id][
+        "lastMediaCleanup"
+    ] = datetime.datetime.utcnow().timestamp()
+    coldDirPath = getColdDirPathForEntry(entry_id)
+    hotDirPath = getHotDirPathForEntry(entry_id)
+
+    # Delete everything other than COLD_DIR_DELETE_TIME seconds from cold storage
+    LOGGER.debug(
+        "Deleting cold storage files older than "
+        + str(COLD_DIR_DELETE_TIME)
+        + " seconds for entity "
+        + entry_id
+        + "..."
+    )
+    deleteFilesOlderThan(coldDirPath, COLD_DIR_DELETE_TIME)
+
+    # Delete everything other than HOT_DIR_DELETE_TIME seconds from hot storage
+    LOGGER.debug(
+        "Deleting hot storage files older than "
+        + str(HOT_DIR_DELETE_TIME)
+        + " seconds for entity "
+        + entry_id
+        + "..."
+    )
+    deleteFilesOlderThan(hotDirPath, HOT_DIR_DELETE_TIME)
+
+
+def deleteDir(dirPath):
+    if (
+        os.path.exists(dirPath)
+        and os.path.isdir(dirPath)
+        and dirPath != "/"
+        and "tapo_control/" in dirPath
+    ):
+        LOGGER.debug("Deleting folder " + dirPath + "...")
+        shutil.rmtree(dirPath)
+
+
+def deleteFilesOlderThan(dirPath, deleteOlderThan):
+    now = datetime.datetime.utcnow().timestamp()
+    if os.path.exists(dirPath):
+        for f in os.listdir(dirPath):
+            filePath = os.path.join(dirPath, f)
+            last_modified = os.stat(filePath).st_mtime
+            if now - last_modified > deleteOlderThan:
+                os.remove(filePath)
+
+
+async def getRecording(
+    hass: HomeAssistant,
+    tapo: Tapo,
+    entry_id: str,
+    date: str,
+    startDate: int,
+    endDate: int,
+) -> str:
+    # this NEEDS to happen otherwise camera does not send data!
+    await hass.async_add_executor_job(tapo.getRecordings, date)
+
+    mediaCleanup(hass, entry_id)
+
+    coldDirPath = getColdDirPathForEntry(entry_id)
+    hotDirPath = getHotDirPathForEntry(entry_id)
+
+    pathlib.Path(coldDirPath).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(hotDirPath).mkdir(parents=True, exist_ok=True)
+    downloader = Downloader(
+        tapo,
+        startDate,
+        endDate,
+        coldDirPath,
+        0,
+        None,
+        None,
+        hashlib.md5((str(startDate) + str(endDate)).encode()).hexdigest() + ".mp4",
+    )
+    # todo: automatic deletion of recordings longer than X in hot storage
+
+    hass.data[DOMAIN][entry_id]["isDownloadingStream"] = True
+    downloadedFile = await downloader.downloadFile(LOGGER)
+    hass.data[DOMAIN][entry_id]["isDownloadingStream"] = False
+    if downloadedFile["currentAction"] == "Recording in progress":
+        raise Unresolvable("Recording is currently in progress.")
+
+    coldFilePath = downloadedFile["fileName"]
+    hotFilePath = (
+        coldFilePath.replace("./.storage/", "./www/").replace(".mp4", "")
+        + UUID
+        + ".mp4"
+    )
+    shutil.copyfile(coldFilePath, hotFilePath)
+
+    fileWebPath = hotFilePath[6:]  # remove ./www/
+
+    return f"/local/{fileWebPath}"
 
 
 def areCameraPortsOpened(host):
@@ -118,12 +238,22 @@ async def initOnvifEvents(hass, host, username, password):
     return False
 
 
+def tryParseInt(value):
+    try:
+        return int(value)
+    except Exception as e:
+        LOGGER.error("Couldnt parse as integer: %s", str(e))
+        return None
+
+
 async def getCamData(hass, controller):
     LOGGER.debug("getCamData")
     data = await hass.async_add_executor_job(controller.getMost)
     LOGGER.debug("Raw update data:")
     LOGGER.debug(data)
     camData = {}
+
+    camData["raw"] = data
 
     camData["user"] = controller.user
     camData["basic_info"] = data["getDeviceInfo"]["device_info"]["basic_info"]
@@ -156,6 +286,27 @@ async def getCamData(hass, controller):
     camData["motion_detection_sensitivity"] = motion_detection_sensitivity
 
     try:
+        personDetectionData = data["getPersonDetectionConfig"]["people_detection"][
+            "detection"
+        ]
+        person_detection_enabled = personDetectionData["enabled"]
+        person_detection_sensitivity = None
+
+        sensitivity = tryParseInt(personDetectionData["sensitivity"])
+        if sensitivity is not None:
+            if sensitivity <= 33:
+                person_detection_sensitivity = "low"
+            elif sensitivity <= 66:
+                person_detection_sensitivity = "normal"
+            else:
+                person_detection_sensitivity = "high"
+    except Exception:
+        person_detection_enabled = None
+        person_detection_sensitivity = None
+    camData["person_detection_enabled"] = person_detection_enabled
+    camData["person_detection_sensitivity"] = person_detection_sensitivity
+
+    try:
         presets = {
             id: data["getPresetConfig"]["preset"]["preset"]["name"][key]
             for key, id in enumerate(data["getPresetConfig"]["preset"]["preset"]["id"])
@@ -181,12 +332,40 @@ async def getCamData(hass, controller):
         light_frequency_mode = data["getLdc"]["image"]["common"]["light_freq_mode"]
     except Exception:
         light_frequency_mode = None
+
+    if light_frequency_mode is None:
+        try:
+            light_frequency_mode = data["getLightFrequencyInfo"]["image"]["common"][
+                "light_freq_mode"
+            ]
+        except Exception:
+            light_frequency_mode = None
     camData["light_frequency_mode"] = light_frequency_mode
 
     try:
         day_night_mode = data["getLdc"]["image"]["common"]["inf_type"]
     except Exception:
         day_night_mode = None
+
+    if day_night_mode is None:
+        try:
+            if (
+                data["getNightVisionModeConfig"]["image"]["switch"]["night_vision_mode"]
+                == "inf_night_vision"
+            ):
+                day_night_mode = "on"
+            elif (
+                data["getNightVisionModeConfig"]["image"]["switch"]["night_vision_mode"]
+                == "wtl_night_vision"
+            ):
+                day_night_mode = "off"
+            elif (
+                data["getNightVisionModeConfig"]["image"]["switch"]["night_vision_mode"]
+                == "md_night_vision"
+            ):
+                day_night_mode = "auto"
+        except Exception:
+            day_night_mode = None
     camData["day_night_mode"] = day_night_mode
 
     try:
@@ -203,6 +382,16 @@ async def getCamData(hass, controller):
         )
     except Exception:
         flip = None
+
+    if flip is None:
+        try:
+            flip = (
+                "on"
+                if data["getRotationStatus"]["image"]["switch"]["flip_type"] == "center"
+                else "off"
+            )
+        except Exception:
+            flip = None
     camData["flip"] = flip
 
     try:
@@ -212,14 +401,17 @@ async def getCamData(hass, controller):
     except Exception:
         alarm = None
         alarm_mode = None
+
+    if alarm is None or alarm_mode is None:
+        try:
+            alarmData = data["getAlarmConfig"]
+            alarm = alarmData["enabled"]
+            alarm_mode = alarmData["alarm_mode"]
+        except Exception:
+            alarm = None
+            alarm_mode = None
     camData["alarm"] = alarm
     camData["alarm_mode"] = alarm_mode
-
-    try:
-        day_night_mode = data["getLdc"]["image"]["common"]["inf_type"]
-    except Exception:
-        day_night_mode = None
-    camData["day_night_mode"] = day_night_mode
 
     try:
         led = data["getLedStatus"]["led"]["config"]["enabled"]
@@ -247,6 +439,12 @@ async def getCamData(hass, controller):
         firmwareUpdateStatus = None
     camData["firmwareUpdateStatus"] = firmwareUpdateStatus
 
+    try:
+        childDevices = data["getChildDeviceList"]
+    except Exception:
+        childDevices = None
+    camData["childDevices"] = childDevices
+
     LOGGER.debug("getCamData - done")
     LOGGER.debug("Processed update data:")
     LOGGER.debug(camData)
@@ -270,6 +468,7 @@ async def update_listener(hass, entry):
             tapoController = await hass.async_add_executor_job(
                 registerController, host, username, password
             )
+        hass.data[DOMAIN][entry.entry_id]["usingCloudPassword"] = cloud_password != ""
         hass.data[DOMAIN][entry.entry_id]["controller"] = tapoController
     except Exception:
         LOGGER.error(
@@ -296,10 +495,8 @@ async def update_listener(hass, entry):
             await setupOnvif(hass, entry)
 
 
-async def getLatestFirmwareVersion(hass, entry, controller):
-    hass.data[DOMAIN][entry.entry_id][
-        "lastFirmwareCheck"
-    ] = datetime.datetime.utcnow().timestamp()
+async def getLatestFirmwareVersion(hass, config_entry, entry, controller):
+    entry["lastFirmwareCheck"] = datetime.datetime.utcnow().timestamp()
     try:
         updateInfo = await hass.async_add_executor_job(controller.isUpdateAvailable)
         if (
@@ -392,11 +589,97 @@ def build_device_info(attributes: dict) -> DeviceInfo:
     )
 
 
+def pytapoFunctionMap(pytapoFunctionName):
+    if pytapoFunctionName == "getPrivacyMode":
+        return ["getLensMaskConfig"]
+    elif pytapoFunctionName == "getBasicInfo":
+        return ["getDeviceInfo"]
+    elif pytapoFunctionName == "getMotionDetection":
+        return ["getDetectionConfig"]
+    elif pytapoFunctionName == "getPersonDetection":
+        return ["getPersonDetectionConfig"]
+    elif pytapoFunctionName == "getLdc":
+        return ["getLensDistortionCorrection"]
+    elif pytapoFunctionName == "getAlarm":
+        return ["getLastAlarmInfo", "getAlarmConfig"]
+    elif pytapoFunctionName == "getLED":
+        return ["getLedStatus"]
+    elif pytapoFunctionName == "getAutoTrackTarget":
+        return ["getTargetTrackConfig"]
+    elif pytapoFunctionName == "getPresets":
+        return ["getPresetConfig"]
+    elif pytapoFunctionName == "getFirmwareUpdateStatus":
+        return ["getFirmwareUpdateStatus"]
+    elif pytapoFunctionName == "getMediaEncrypt":
+        return ["getMediaEncrypt"]
+    elif pytapoFunctionName == "getLightFrequencyMode":
+        return ["getLightFrequencyInfo", "getLightFrequencyCapability"]
+    elif pytapoFunctionName == "getChildDevices":
+        return ["getChildDeviceList"]
+    elif pytapoFunctionName == "getRotationStatus":
+        return ["getRotationStatus"]
+    elif pytapoFunctionName == "getForceWhitelampState":
+        return ["getLdc"]
+    elif pytapoFunctionName == "getDayNightMode":
+        return ["getLightFrequencyInfo", "getNightVisionModeConfig"]
+    elif pytapoFunctionName == "getImageFlipVertical":
+        return ["getRotationStatus", "getLdc"]
+    elif pytapoFunctionName == "getLensDistortionCorrection":
+        return ["getLdc"]
+    return []
+
+
+def isCacheSupported(check_function, rawData):
+    rawFunctions = pytapoFunctionMap(check_function)
+    for function in rawFunctions:
+        if function in rawData and rawData[function]:
+            if check_function == "getForceWhitelampState":
+                return (
+                    "image" in rawData["getLdc"]
+                    and "switch" in rawData["getLdc"]["image"]
+                    and "force_wtl_state" in rawData["getLdc"]["image"]["switch"]
+                )
+            elif check_function == "getDayNightMode":
+                return (
+                    "image" in rawData["getLightFrequencyInfo"]
+                    and "common" in rawData["getLightFrequencyInfo"]["image"]
+                    and "inf_type"
+                    in rawData["getLightFrequencyInfo"]["image"]["common"]
+                )
+            elif check_function == "getImageFlipVertical":
+                return (
+                    "image" in rawData["getLdc"]
+                    and "switch" in rawData["getLdc"]["image"]
+                    and "flip_type" in rawData["getLdc"]["image"]["switch"]
+                ) or (
+                    "image" in rawData["getRotationStatus"]
+                    and "switch" in rawData["getRotationStatus"]["image"]
+                    and "flip_type" in rawData["getRotationStatus"]["image"]["switch"]
+                )
+            elif check_function == "getLensDistortionCorrection":
+                return (
+                    "image" in rawData["getLdc"]
+                    and "switch" in rawData["getLdc"]["image"]
+                    and "ldc" in rawData["getLdc"]["image"]["switch"]
+                )
+            return True
+    return False
+
+
 async def check_and_create(entry, hass, cls, check_function, config_entry):
-    try:
-        await hass.async_add_executor_job(getattr(entry["controller"], check_function))
-    except Exception:
-        LOGGER.info(f"Camera does not support {cls.__name__}")
-        return None
-    LOGGER.debug(f"Creating {cls.__name__}")
-    return cls(entry, hass, config_entry)
+    if isCacheSupported(check_function, entry["camData"]["raw"]):
+        LOGGER.debug(
+            f"Found cached capability {check_function}, creating {cls.__name__}"
+        )
+        return cls(entry, hass, config_entry)
+    else:
+        LOGGER.debug(f"Capability {check_function} not found, querying again...")
+        try:
+            await hass.async_add_executor_job(
+                getattr(entry["controller"], check_function)
+            )
+        except Exception:
+            LOGGER.info(f"Camera does not support {cls.__name__}")
+            return None
+        LOGGER.debug(f"Creating {cls.__name__}")
+        return cls(entry, hass, config_entry)

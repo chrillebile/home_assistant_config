@@ -1,0 +1,8 @@
+---
+# This integration indicates whether the current day is a workday or not.
+#
+# https://www.home-assistant.io/integrations/workday/
+#
+binary_sensor:
+  - platform: workday
+    country: SE

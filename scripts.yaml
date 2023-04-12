@@ -1,20 +1,28 @@
 send_love:
   alias: Send Love
   sequence:
-  - service: notify.mobile_app_ac2003
-    data:
-      title: Kärlek till bae
-      message: Älskar dig, puss! ❤️
-  - condition: state
-    entity_id: light.bed
-    state: 'on'
-  - service: light.turn_on
-    target:
-      entity_id: light.bed
-    data:
-      color_name: red
-  mode: single
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ context.user_id == "e86ab65890b248d2b103f41825eace74"
+          }}'
+      sequence:
+      - service: notify.mobile_app_felicia_phone
+        data:
+          message: Älskar dig, puss! ❤️
+          title: Kärlek till bae
+    - conditions:
+      - condition: template
+        value_template: '{{ context.user_id == "78fb6be1593e43dbab0b5e40f0258838"
+          }}'
+      sequence:
+      - service: notify.mobile_app_christian_phone
+        data:
+          message: Älskar dig, puss! ❤️
+          title: Kärlek till bae
+  mode: queued
   icon: mdi:hand-heart
+  max: 3
 camera_off:
   alias: Camera - Off
   sequence:
@@ -44,91 +52,16 @@ camera_on:
 alarm_triggered_clear:
   alias: Alarm Triggered - Clear
   sequence:
-  - service: script.camera_off
-    data: {}
   - service: timer.cancel
     data: {}
     target:
       entity_id: timer.larm_triggered
-  mode: single
-arming_blink:
-  alias: Arming - Blink
-  sequence:
-  - service: switch.turn_off
+  - device_id: 6af7a88d009637d36a125308d21def3a
+    domain: button
+    entity_id: button.office_camera_manual_alarm_stop
+    type: press
+  - service: script.camera_off
     data: {}
-    target:
-      entity_id:
-      - switch.adaptive_lighting_adapt_color_bedroom
-  - repeat:
-      count: '2'
-      sequence:
-      - service: light.toggle
-        data:
-          color_name: blue
-        target:
-          entity_id:
-          - light.ceiling_bedroom
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 1
-          milliseconds: 0
-  - service: switch.turn_on
-    data: {}
-    target:
-      entity_id: switch.adaptive_lighting_adapt_color_bedroom
-  mode: single
-armed_blink:
-  alias: Armed - Blink
-  sequence:
-  - service: switch.turn_off
-    data: {}
-    target:
-      entity_id: switch.adaptive_lighting_adapt_color_bedroom
-  - repeat:
-      count: '2'
-      sequence:
-      - service: light.toggle
-        data:
-          color_name: red
-        target:
-          entity_id:
-          - light.ceiling_bedroom
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 1
-          milliseconds: 0
-  - service: switch.turn_on
-    data: {}
-    target:
-      entity_id: switch.adaptive_lighting_adapt_color_bedroom
-  mode: single
-disarmed_blink:
-  alias: Disarmed - Blink
-  sequence:
-  - service: switch.turn_off
-    data: {}
-    target:
-      entity_id: switch.adaptive_lighting_adapt_color_bedroom
-  - repeat:
-      count: '2'
-      sequence:
-      - service: light.toggle
-        data:
-          color_name: green
-        target:
-          entity_id:
-          - light.ceiling_bedroom
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 1
-          milliseconds: 0
-  - service: switch.turn_on
-    data: {}
-    target:
-      entity_id: switch.adaptive_lighting_adapt_color_bedroom
   mode: single
 triggered_blink:
   alias: Triggered - Blink
@@ -137,12 +70,12 @@ triggered_blink:
     data: {}
     target:
       entity_id:
-      - switch.adaptive_lighting_adapt_color_bedroom
-      - switch.adaptive_lighting_adapt_color_living_room
-      - switch.adaptive_lighting_adapt_color_office
-      - switch.adaptive_lighting_adapt_brightness_bedroom
-      - switch.adaptive_lighting_adapt_brightness_living_room
-      - switch.adaptive_lighting_adapt_brightness_office
+      - switch.adaptive_lighting_bedlight
+      - switch.adaptive_lighting_bedroom
+      - switch.adaptive_lighting_hallway
+      - switch.adaptive_lighting_kitchen
+      - switch.adaptive_lighting_living_room
+      - switch.adaptive_lighting_office
   - repeat:
       while:
       - condition: device
@@ -153,27 +86,30 @@ triggered_blink:
       sequence:
       - service: light.toggle
         data:
-          color_name: red
           brightness_pct: 100
+          color_name: red
         target:
           entity_id:
           - light.bedroom_lights
           - light.living_room_lights
           - light.office_lights
           - light.felicia_desk
+          - light.kitchen_dimmer_light
+          - light.hallway_dimmer_light
+          - light.hallway_door_dimmer_light
       - delay:
           hours: 0
           minutes: 0
-          seconds: 1
-          milliseconds: 500
+          seconds: 5
+          milliseconds: 0
   - service: switch.turn_on
     data: {}
     target:
       entity_id:
-      - switch.adaptive_lighting_adapt_brightness_bedroom
-      - switch.adaptive_lighting_adapt_brightness_living_room
-      - switch.adaptive_lighting_adapt_brightness_office
-      - switch.adaptive_lighting_adapt_color_bedroom
-      - switch.adaptive_lighting_adapt_color_living_room
-      - switch.adaptive_lighting_adapt_color_office
+      - switch.adaptive_lighting_bedlight
+      - switch.adaptive_lighting_bedroom
+      - switch.adaptive_lighting_hallway
+      - switch.adaptive_lighting_kitchen
+      - switch.adaptive_lighting_living_room
+      - switch.adaptive_lighting_office
   mode: single

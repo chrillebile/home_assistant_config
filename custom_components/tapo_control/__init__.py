@@ -1,4 +1,6 @@
 import datetime
+import os
+import shutil
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.ffmpeg import CONF_EXTRA_ARGUMENTS
@@ -22,6 +24,7 @@ from .const import (
     CLOUD_PASSWORD,
     ENABLE_STREAM,
     ENABLE_TIME_SYNC,
+    MEDIA_CLEANUP_PERIOD,
     RTSP_TRANS_PROTOCOLS,
     SOUND_DETECTION_DURATION,
     SOUND_DETECTION_PEAK,
@@ -30,6 +33,10 @@ from .const import (
     UPDATE_CHECK_PERIOD,
 )
 from .utils import (
+    deleteDir,
+    getColdDirPathForEntry,
+    getHotDirPathForEntry,
+    mediaCleanup,
     registerController,
     getCamData,
     setupOnvif,
@@ -138,12 +145,28 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_unload(entry, "light")
     await hass.config_entries.async_forward_entry_unload(entry, "number")
     await hass.config_entries.async_forward_entry_unload(entry, "select")
+    await hass.config_entries.async_forward_entry_unload(entry, "siren")
     await hass.config_entries.async_forward_entry_unload(entry, "switch")
     await hass.config_entries.async_forward_entry_unload(entry, "update")
 
     if hass.data[DOMAIN][entry.entry_id]["events"]:
         await hass.data[DOMAIN][entry.entry_id]["events"].async_stop()
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    LOGGER.debug("async_remove_entry")
+    entry_id = entry.entry_id
+    coldDirPath = getColdDirPathForEntry(entry_id)
+    hotDirPath = getHotDirPathForEntry(entry_id)
+
+    # Delete all media stored in cold storage for entity
+    LOGGER.debug("Deleting cold storage files for entity " + entry_id + "...")
+    deleteDir(coldDirPath)
+
+    # Delete all media stored in hot storage for entity
+    LOGGER.debug("Deleting hot storage files for entity " + entry_id + "...")
+    deleteDir(hotDirPath)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -160,12 +183,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     try:
         if cloud_password != "":
             tapoController = await hass.async_add_executor_job(
-                registerController, host, "admin", cloud_password
+                registerController, host, "admin", cloud_password, cloud_password
             )
         else:
             tapoController = await hass.async_add_executor_job(
                 registerController, host, username, password
             )
+
+        def getAllEntities(entry):
+            # Gather all entities, including of children devices
+            allEntities = entry["entities"].copy()
+            for childDevice in entry["childDevices"]:
+                allEntities.extend(childDevice["entities"])
+            return allEntities
 
         async def async_update_data():
             LOGGER.debug("async_update_data - entry")
@@ -179,44 +209,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             if motionSensor or enableTimeSync:
                 LOGGER.debug("Motion sensor or time sync is enabled.")
                 if (
-                    not hass.data[DOMAIN][entry.entry_id]["eventsDevice"]
-                    or not hass.data[DOMAIN][entry.entry_id]["onvifManagement"]
+                    not hass.data[DOMAIN][entry.entry_id]["isChild"]
+                    and not hass.data[DOMAIN][entry.entry_id]["isParent"]
                 ):
-                    LOGGER.debug("Setting up subscription to motion sensor...")
-                    # retry if connection to onvif failed
-                    LOGGER.debug("Initiating onvif.")
-                    onvifDevice = await initOnvifEvents(hass, host, username, password)
-                    LOGGER.debug(onvifDevice)
-                    hass.data[DOMAIN][entry.entry_id]["eventsDevice"] = onvifDevice[
-                        "device"
-                    ]
-                    hass.data[DOMAIN][entry.entry_id]["onvifManagement"] = onvifDevice[
-                        "device_mgmt"
-                    ]
-                    if motionSensor:
-                        await setupOnvif(hass, entry)
-                elif (
-                    not hass.data[DOMAIN][entry.entry_id]["eventsSetup"]
-                    and motionSensor
-                ):
-                    LOGGER.debug("Setting up subcription to motion sensor events...")
-                    # retry if subscription to events failed
-                    hass.data[DOMAIN][entry.entry_id][
-                        "eventsSetup"
-                    ] = await setupEvents(hass, entry)
+                    if (
+                        not hass.data[DOMAIN][entry.entry_id]["eventsDevice"]
+                        or not hass.data[DOMAIN][entry.entry_id]["onvifManagement"]
+                    ):
+                        LOGGER.debug("Setting up subscription to motion sensor...")
+                        # retry if connection to onvif failed
+                        LOGGER.debug("Initiating onvif.")
+                        onvifDevice = await initOnvifEvents(
+                            hass, host, username, password
+                        )
+                        if onvifDevice:
+                            LOGGER.debug(onvifDevice)
+                            hass.data[DOMAIN][entry.entry_id][
+                                "eventsDevice"
+                            ] = onvifDevice["device"]
+                            hass.data[DOMAIN][entry.entry_id][
+                                "onvifManagement"
+                            ] = onvifDevice["device_mgmt"]
+                            if motionSensor:
+                                await setupOnvif(hass, entry)
+                    elif (
+                        not hass.data[DOMAIN][entry.entry_id]["eventsSetup"]
+                        and motionSensor
+                    ):
+                        LOGGER.debug(
+                            "Setting up subcription to motion sensor events..."
+                        )
+                        # retry if subscription to events failed
+                        hass.data[DOMAIN][entry.entry_id][
+                            "eventsSetup"
+                        ] = await setupEvents(hass, entry)
+                    else:
+                        LOGGER.debug("Motion sensor: OK")
                 else:
-                    LOGGER.debug("Motion sensor: OK")
+                    LOGGER.debug(
+                        "Not updating motion sensor because device is child or parent."
+                    )
 
+                ts = datetime.datetime.utcnow().timestamp()
                 if (
                     hass.data[DOMAIN][entry.entry_id]["onvifManagement"]
                     and enableTimeSync
                 ):
-                    ts = datetime.datetime.utcnow().timestamp()
                     if (
                         ts - hass.data[DOMAIN][entry.entry_id]["lastTimeSync"]
                         > TIME_SYNC_PERIOD
                     ):
                         await syncTime(hass, entry.entry_id)
+                if (
+                    ts - hass.data[DOMAIN][entry.entry_id]["lastMediaCleanup"]
+                    > MEDIA_CLEANUP_PERIOD
+                ):
+                    mediaCleanup(hass, entry.entry_id)
                 ts = datetime.datetime.utcnow().timestamp()
                 if (
                     ts - hass.data[DOMAIN][entry.entry_id]["lastFirmwareCheck"]
@@ -225,35 +273,74 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                     hass.data[DOMAIN][entry.entry_id][
                         "latestFirmwareVersion"
                     ] = await getLatestFirmwareVersion(
-                        hass, entry, hass.data[DOMAIN][entry.entry_id]["controller"]
+                        hass,
+                        entry,
+                        hass.data[DOMAIN][entry.entry_id],
+                        hass.data[DOMAIN][entry.entry_id]["controller"],
                     )
+                    for childDevice in hass.data[DOMAIN][entry.entry_id][
+                        "childDevices"
+                    ]:
+                        childDevice[
+                            "latestFirmwareVersion"
+                        ] = await getLatestFirmwareVersion(
+                            hass,
+                            entry,
+                            hass.data[DOMAIN][entry.entry_id],
+                            childDevice["controller"],
+                        )
 
             # cameras state
+            LOGGER.debug("async_update_data - before someCameraEnabled check")
             someCameraEnabled = False
-            for entity in hass.data[DOMAIN][entry.entry_id]["entities"]:
-                if entity._enabled:
+            allEntities = getAllEntities(hass.data[DOMAIN][entry.entry_id])
+            for entity in allEntities:
+                LOGGER.debug(entity["entity"])
+                if entity["entity"]._enabled:
+                    LOGGER.debug("async_update_data - enabling someCameraEnabled check")
                     someCameraEnabled = True
+                    break
 
             if someCameraEnabled:
-                try:
-                    camData = await getCamData(hass, tapoController)
-                except Exception as e:
-                    camData = False
-                    LOGGER.error(e)
-                hass.data[DOMAIN][entry.entry_id]["camData"] = camData
+                # Update data for all controllers
+                updateDataForAllControllers = {}
+                for controller in hass.data[DOMAIN][entry.entry_id]["allControllers"]:
+                    try:
+                        updateDataForAllControllers[controller] = await getCamData(
+                            hass, controller
+                        )
+                    except Exception as e:
+                        updateDataForAllControllers[controller] = False
+                        LOGGER.error(e)
+
+                hass.data[DOMAIN][entry.entry_id][
+                    "camData"
+                ] = updateDataForAllControllers[tapoController]
 
                 LOGGER.debug("Updating entities...")
-                for entity in hass.data[DOMAIN][entry.entry_id]["entities"]:
-                    if entity._enabled:
-                        entity.updateTapo(camData)
-                        entity.async_schedule_update_ha_state(True)
+
+                # Gather all entities, including of children devices
+                allEntities = getAllEntities(hass.data[DOMAIN][entry.entry_id])
+
+                for entity in allEntities:
+                    if entity["entity"]._enabled:
+                        LOGGER.debug("Updating entity...")
+                        LOGGER.debug(entity["entity"])
+                        entity["camData"] = updateDataForAllControllers[
+                            entity["entry"]["controller"]
+                        ]
+                        entity["entity"].updateTapo(
+                            updateDataForAllControllers[entity["entry"]["controller"]]
+                        )
+                        entity["entity"].async_schedule_update_ha_state(True)
                         # start noise detection
                         if (
                             not hass.data[DOMAIN][entry.entry_id]["noiseSensorStarted"]
-                            and entity._is_noise_sensor
-                            and entity._enable_sound_detection
+                            and entity["entity"]._is_noise_sensor
+                            and entity["entity"]._enable_sound_detection
                         ):
-                            await entity.startNoiseDetection()
+                            await entity["entity"].startNoiseDetection()
+
                 if ("updateEntity" in hass.data[DOMAIN][entry.entry_id]) and hass.data[
                     DOMAIN
                 ][entry.entry_id]["updateEntity"]._enabled:
@@ -272,10 +359,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         hass.data[DOMAIN][entry.entry_id] = {
             "controller": tapoController,
+            "usingCloudPassword": cloud_password != "",
+            "allControllers": [tapoController],
             "update_listener": entry.add_update_listener(update_listener),
             "coordinator": tapoCoordinator,
             "camData": camData,
             "lastTimeSync": 0,
+            "lastMediaCleanup": 0,
             "lastFirmwareCheck": 0,
             "latestFirmwareVersion": False,
             "motionSensorCreated": False,
@@ -287,13 +377,55 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             "entities": [],
             "noiseSensorStarted": False,
             "name": camData["basic_info"]["device_alias"],
+            "childDevices": [],
+            "isChild": False,
+            "isParent": False,
+            "isDownloadingStream": False,
         }
 
+        if camData["childDevices"] is False or camData["childDevices"] is None:
+            hass.async_create_task(
+                hass.config_entries.async_forward_entry_setup(entry, "camera")
+            )
+        else:
+            hass.data[DOMAIN][entry.entry_id]["isParent"] = True
+            for childDevice in camData["childDevices"]["child_device_list"]:
+                tapoChildController = await hass.async_add_executor_job(
+                    registerController,
+                    host,
+                    "admin",
+                    cloud_password,
+                    cloud_password,
+                    "",
+                    childDevice["device_id"],
+                )
+                hass.data[DOMAIN][entry.entry_id]["allControllers"].append(
+                    tapoChildController
+                )
+                childCamData = await getCamData(hass, tapoChildController)
+                hass.data[DOMAIN][entry.entry_id]["childDevices"].append(
+                    {
+                        "controller": tapoChildController,
+                        "coordinator": tapoCoordinator,
+                        "camData": childCamData,
+                        "lastTimeSync": 0,
+                        "lastMediaCleanup": 0,
+                        "lastFirmwareCheck": 0,
+                        "latestFirmwareVersion": False,
+                        "motionSensorCreated": False,
+                        "entities": [],
+                        "name": camData["basic_info"]["device_alias"],
+                        "childDevices": [],
+                        "isChild": True,
+                        "isParent": False,
+                    }
+                )
+
         hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, "button")
+            hass.config_entries.async_forward_entry_setup(entry, "switch")
         )
         hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, "camera")
+            hass.config_entries.async_forward_entry_setup(entry, "button")
         )
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, "light")
@@ -305,7 +437,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.config_entries.async_forward_entry_setup(entry, "select")
         )
         hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, "switch")
+            hass.config_entries.async_forward_entry_setup(entry, "siren")
         )
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, "update")
@@ -313,9 +445,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, "binary_sensor")
         )
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, "sensor")
+        )
 
         # Needs to execute AFTER binary_sensor creation!
-        if motionSensor or enableTimeSync:
+        if camData["childDevices"] is None and (motionSensor or enableTimeSync):
             onvifDevice = await initOnvifEvents(hass, host, username, password)
             hass.data[DOMAIN][entry.entry_id]["eventsDevice"] = onvifDevice["device"]
             hass.data[DOMAIN][entry.entry_id]["onvifManagement"] = onvifDevice[

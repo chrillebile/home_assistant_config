@@ -1,13 +1,12 @@
 """Support for Blitzortung geo location events."""
 import bisect
-import hashlib
 import logging
 import time
+import uuid
 
 from homeassistant.components.geo_location import GeolocationEvent
 from homeassistant.const import (
     ATTR_ATTRIBUTION,
-    CONF_UNIT_SYSTEM_IMPERIAL,
     LENGTH_KILOMETERS,
     LENGTH_MILES,
 )
@@ -17,6 +16,7 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_send,
 )
 from homeassistant.util.dt import utc_from_timestamp
+from homeassistant.util.unit_system import IMPERIAL_SYSTEM
 
 from .const import ATTR_EXTERNAL_ID, ATTR_PUBLICATION_DATE, ATTRIBUTION, DOMAIN
 
@@ -97,7 +97,7 @@ class BlitzortungEventManager:
         self._strikes = Strikes(max_tracked_lightnings)
         self._window_seconds = window_seconds
 
-        if hass.config.units.name == CONF_UNIT_SYSTEM_IMPERIAL:
+        if hass.config.units == IMPERIAL_SYSTEM:
             self._unit = LENGTH_MILES
         else:
             self._unit = LENGTH_KILOMETERS
@@ -108,8 +108,10 @@ class BlitzortungEventManager:
             lightning["distance"],
             lightning["lat"],
             lightning["lon"],
-            "km",
+            self._unit,
             lightning["time"],
+            lightning["status"],
+            lightning["region"],
         )
         to_delete = self._strikes.insort(event)
         self._async_add_entities([event])
@@ -135,15 +137,17 @@ class BlitzortungEventManager:
 class BlitzortungEvent(GeolocationEvent):
     """Define a lightning strike event."""
 
-    def __init__(self, distance, latitude, longitude, unit, time):
+    def __init__(self, distance, latitude, longitude, unit, time, status, region):
         """Initialize entity with data provided."""
         self._distance = distance
         self._latitude = latitude
         self._longitude = longitude
         self._time = time
+        self._status = status
+        self._region = region
         self._publication_date = time / 1e9
         self._remove_signal_delete = None
-        self._strike_id = hashlib.sha1(f"{latitude}_{longitude}_{time}".encode()).hexdigest()
+        self._strike_id = str(uuid.uuid4()).replace("-", "")
         self._unit_of_measurement = unit
         self.entity_id = "geo_location.lightning_strike_{0}".format(self._strike_id)
 
