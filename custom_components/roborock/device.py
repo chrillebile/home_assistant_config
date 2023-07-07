@@ -1,64 +1,43 @@
 """Support for Roborock device base class."""
 from __future__ import annotations
 
-import datetime
 import logging
+from typing import Optional
 
-from roborock.containers import Status
-from roborock.typing import RoborockCommand, RoborockDeviceInfo
-
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from roborock.api import RT, RoborockClient
+from roborock.containers import Status
+from roborock.exceptions import RoborockException
+from roborock.roborock_typing import RoborockCommand
 
-from . import RoborockDataUpdateCoordinator
 from .const import DOMAIN
+from .coordinator import RoborockDataUpdateCoordinator
+from .roborock_typing import RoborockHassDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def parse_datetime_time(initial_time: datetime.time) -> float:
-    """Help to handle time data."""
-    time = datetime.datetime.now().replace(
-        hour=initial_time.hour, minute=initial_time.minute, second=0, microsecond=0
-    )
-
-    if time < datetime.datetime.now():
-        time += datetime.timedelta(days=1)
-
-    return time.timestamp()
-
-
-class RoborockCoordinatedEntity(CoordinatorEntity[RoborockDataUpdateCoordinator]):
+class RoborockEntity(Entity):
     """Representation of a base a coordinated Roborock Entity."""
 
     _attr_has_entity_name = True
 
     def __init__(
-        self,
-        device_info: RoborockDeviceInfo,
-        coordinator: RoborockDataUpdateCoordinator,
-        unique_id: str | None = None,
+            self,
+            device_info: RoborockHassDeviceInfo,
+            unique_id: str,
+            api: RoborockClient,
     ) -> None:
         """Initialize the coordinated Roborock Device."""
-        super().__init__(coordinator)
         self._device_name = device_info.device.name
         self._attr_unique_id = unique_id
         self._device_id = str(device_info.device.duid)
-        self._device_model = device_info.product.model
+        self._device_model = device_info.model
         self._fw_version = device_info.device.fv
-
-    @property
-    def _device_status(self) -> Status:
-        data = self.coordinator.data
-        if not data:
-            return Status({})
-        device_data = data.get(self._device_id)
-        if not device_data:
-            return Status({})
-        status = device_data.status
-        if not status:
-            return Status({})
-        return status
+        self._device_info = device_info
+        self.api = api
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -71,22 +50,71 @@ class RoborockCoordinatedEntity(CoordinatorEntity[RoborockDataUpdateCoordinator]
             sw_version=self._fw_version,
         )
 
-    def translate(self, attr: str, value) -> str:
-        """Translate value into new language."""
-        translation = self.coordinator.translation
-        if not translation:
-            return value
-        key = translation.get(self.translation_key)
-        if not key:
-            return value
-        attr_value = key.get(attr)
-        if not attr_value:
-            return value
-        translated_value = attr_value.get(str(value))
-        if not translated_value:
-            return value
-        return translated_value
+    @property
+    def _device_status(self) -> Status:
+        props = self._device_info.props
+        if props is None:
+            return Status()
+        status = props.status
+        if status is None:
+            return Status()
+        return status
 
-    async def send(self, command: RoborockCommand, params=None):
+    def is_valid_map(self) -> bool:
+        """Check if map is valid."""
+        return self._device_info.is_map_valid
+
+    def set_valid_map(self) -> None:
+        """Set map as valid to avoid unnecessary updates."""
+        self._device_info.is_map_valid = True
+
+    def set_invalid_map(self) -> None:
+        """Set map as invalid so it can be updated."""
+        self._device_info.is_map_valid = False
+
+    async def send(
+            self,
+            method: RoborockCommand,
+            params: Optional[list | dict] = None,
+            return_type: Optional[type[RT]] = None,
+    ) -> RT:
         """Send a command to a vacuum cleaner."""
-        return await self.coordinator.api.send_command(self._device_id, command, params)
+        try:
+            response = await self.api.send_command(method, params, return_type)
+        except RoborockException as err:
+            raise HomeAssistantError(
+                f"Error while calling {method.name} with {params}"
+            ) from err
+        return response
+
+
+class RoborockCoordinatedEntity(RoborockEntity, CoordinatorEntity[RoborockDataUpdateCoordinator]):
+    """Representation of a base a coordinated Roborock Entity."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+            self,
+            device_info: RoborockHassDeviceInfo,
+            coordinator: RoborockDataUpdateCoordinator,
+            unique_id: str | None = None,
+    ) -> None:
+        """Initialize the coordinated Roborock Device."""
+        RoborockEntity.__init__(self, device_info, unique_id, coordinator.api)
+        CoordinatorEntity.__init__(self, coordinator)
+        self._device_name = device_info.device.name
+        self._attr_unique_id = unique_id
+        self._device_id = str(device_info.device.duid)
+        self._device_model = device_info.model
+        self._fw_version = device_info.device.fv
+
+    async def send(
+            self,
+            method: RoborockCommand,
+            params: Optional[list | dict] = None,
+            return_type: Optional[type[RT]] = None,
+    ) -> RT:
+        """Send a command to a vacuum cleaner."""
+        response = await super().send(method, params, return_type)
+        self.coordinator.schedule_refresh()
+        return response

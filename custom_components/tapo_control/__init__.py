@@ -13,11 +13,13 @@ from homeassistant.const import (
 )
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt
 
 from .const import (
     CONF_RTSP_TRANSPORT,
     ENABLE_SOUND_DETECTION,
     CONF_CUSTOM_STREAM,
+    ENABLE_WEBHOOKS,
     LOGGER,
     DOMAIN,
     ENABLE_MOTION_SENSOR,
@@ -36,6 +38,7 @@ from .utils import (
     deleteDir,
     getColdDirPathForEntry,
     getHotDirPathForEntry,
+    isUsingHTTPS,
     mediaCleanup,
     registerController,
     getCamData,
@@ -58,7 +61,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
     LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1:
-
         new = {**config_entry.data}
         new[ENABLE_MOTION_SENSOR] = True
         new[CLOUD_PASSWORD] = ""
@@ -68,7 +70,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 2
 
     if config_entry.version == 2:
-
         new = {**config_entry.data}
         new[CLOUD_PASSWORD] = ""
 
@@ -77,7 +78,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 3
 
     if config_entry.version == 3:
-
         new = {**config_entry.data}
         new[ENABLE_STREAM] = True
 
@@ -86,7 +86,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 4
 
     if config_entry.version == 4:
-
         new = {**config_entry.data}
         new[ENABLE_TIME_SYNC] = False
 
@@ -95,7 +94,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 5
 
     if config_entry.version == 5:
-
         new = {**config_entry.data}
         new[ENABLE_SOUND_DETECTION] = False
         new[SOUND_DETECTION_PEAK] = -50
@@ -107,7 +105,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 6
 
     if config_entry.version == 6:
-
         new = {**config_entry.data}
         new[CONF_EXTRA_ARGUMENTS] = ""
 
@@ -116,7 +113,6 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 7
 
     if config_entry.version == 7:
-
         new = {**config_entry.data}
         new[CONF_CUSTOM_STREAM] = ""
 
@@ -125,13 +121,20 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
         config_entry.version = 8
 
     if config_entry.version == 8:
-
         new = {**config_entry.data}
         new[CONF_RTSP_TRANSPORT] = RTSP_TRANS_PROTOCOLS[0]
 
         config_entry.data = {**new}
 
         config_entry.version = 9
+
+    if config_entry.version == 9:
+        new = {**config_entry.data}
+        new[ENABLE_WEBHOOKS] = True
+
+        config_entry.data = {**new}
+
+        config_entry.version = 10
 
     LOGGER.info("Migration to version %s successful", config_entry.version)
 
@@ -180,6 +183,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     cloud_password = entry.data.get(CLOUD_PASSWORD)
     enableTimeSync = entry.data.get(ENABLE_TIME_SYNC)
 
+    if isUsingHTTPS(hass):
+        LOGGER.warn(
+            "Home Assistant is running on HTTPS or it was not able to detect base_url schema. Disabling webhooks."
+        )
+
+    # todo: figure out where to set officially?
+    entry.unique_id = DOMAIN + host
+
     try:
         if cloud_password != "":
             tapoController = await hass.async_add_executor_job(
@@ -216,9 +227,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                         not hass.data[DOMAIN][entry.entry_id]["eventsDevice"]
                         or not hass.data[DOMAIN][entry.entry_id]["onvifManagement"]
                     ):
-                        LOGGER.debug("Setting up subscription to motion sensor...")
                         # retry if connection to onvif failed
-                        LOGGER.debug("Initiating onvif.")
+                        LOGGER.debug("Setting up subscription to motion sensor...")
                         onvifDevice = await initOnvifEvents(
                             hass, host, username, password
                         )
@@ -240,9 +250,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                             "Setting up subcription to motion sensor events..."
                         )
                         # retry if subscription to events failed
-                        hass.data[DOMAIN][entry.entry_id][
-                            "eventsSetup"
-                        ] = await setupEvents(hass, entry)
+                        try:
+                            hass.data[DOMAIN][entry.entry_id][
+                                "eventsSetup"
+                            ] = await setupEvents(hass, entry)
+                        except AssertionError as e:
+                            if str(e) != "PullPoint manager already started":
+                                raise AssertionError(e)
+
                     else:
                         LOGGER.debug("Motion sensor: OK")
                 else:
@@ -352,10 +367,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                     ].async_schedule_update_ha_state(True)
 
         tapoCoordinator = DataUpdateCoordinator(
-            hass, LOGGER, name="Tapo resource status", update_method=async_update_data,
+            hass,
+            LOGGER,
+            name="Tapo resource status",
+            update_method=async_update_data,
         )
 
         camData = await getCamData(hass, tapoController)
+        cameraTime = await hass.async_add_executor_job(tapoController.getTime)
+        cameraTS = cameraTime["system"]["clock_status"]["seconds_from_1970"]
+        currentTS = dt.as_timestamp(dt.now())
 
         hass.data[DOMAIN][entry.entry_id] = {
             "controller": tapoController,
@@ -381,6 +402,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             "isChild": False,
             "isParent": False,
             "isDownloadingStream": False,
+            "timezoneOffset": cameraTS - currentTS,
         }
 
         if camData["childDevices"] is False or camData["childDevices"] is None:

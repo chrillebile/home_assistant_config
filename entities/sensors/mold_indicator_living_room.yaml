@@ -1,0 +1,11 @@
+---
+# Mold Indicator
+#
+# https://www.home-assistant.io/integrations/mold_indicator
+#
+platform: mold_indicator
+name: Living Room Mold Indicator
+indoor_temp_sensor: sensor.living_room_climate_temperature_sensor
+indoor_humidity_sensor: sensor.living_room_climate_humidity_sensor
+outdoor_temp_sensor: sensor.outdoor_climate_temperature
+calibration_factor: 2.0

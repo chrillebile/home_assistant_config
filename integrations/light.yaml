@@ -1,6 +1,0 @@
----
-# This loads my light configurations.
-#
-# https://www.home-assistant.io/integrations/light/
-#
-light: !include_dir_list ../entities/lights

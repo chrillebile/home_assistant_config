@@ -1,7 +1,12 @@
 """Constants for Roborock."""
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
+from homeassistant.components.time import DOMAIN as TIME_DOMAIN
 from homeassistant.components.vacuum import DOMAIN as VACUUM_DOMAIN
 
 DOMAIN = "roborock"
@@ -10,13 +15,21 @@ CONF_ENTRY_CODE = "code"
 CONF_ENTRY_PASSWORD = "password"
 CONF_BASE_URL = "base_url"
 CONF_USER_DATA = "user_data"
+CONF_CLOUD_INTEGRATION = "cloud_integration"
 DEFAULT_NAME = DOMAIN
 
+CONF_HOME_DATA = "home_data"
+
 BINARY_SENSOR = BINARY_SENSOR_DOMAIN
+BUTTON = BUTTON_DOMAIN
 CAMERA = CAMERA_DOMAIN
+NUMBER = NUMBER_DOMAIN
+SELECT = SELECT_DOMAIN
 SENSOR = SENSOR_DOMAIN
+SWITCH = SWITCH_DOMAIN
+TIME = TIME_DOMAIN
 VACUUM = VACUUM_DOMAIN
-PLATFORMS = [VACUUM, CAMERA, SENSOR, BINARY_SENSOR]
+PLATFORMS = [BINARY_SENSOR, BUTTON, CAMERA, NUMBER, SELECT, SENSOR, SWITCH, TIME, VACUUM]
 
 ROCKROBO_V1 = "rockrobo.vacuum.v1"
 ROCKROBO_S4 = "roborock.vacuum.s4"
@@ -61,7 +74,11 @@ MODELS_VACUUM_WITH_SEPARATE_MOP = [
 MINIMAL_IMAGE_WIDTH = 20
 MINIMAL_IMAGE_HEIGHT = 20
 
+CONF_LOCAL_BACKUP = "local_backup"
+CONF_CLOUD_BACKUP = "cloud_backup"
 CONF_INCLUDE_SHARED = "include_shared"
+CONF_INCLUDE_NOGO = "include_nogo"
+CONF_INCLUDE_IGNORED_OBSTACLES = "include_ignored_obstacles"
 CONF_BOTTOM = "bottom"
 CONF_COLOR = "color"
 CONF_COLORS = "colors"
@@ -331,8 +348,3 @@ ATTR_Y2 = "y2"
 ATTR_Y3 = "y3"
 
 MM = 50
-# Total time in seconds consumables have before Roborock recommends replacing
-MAIN_BRUSH_REPLACE_TIME = 1080000
-SIDE_BRUSH_REPLACE_TIME = 720000
-FILTER_REPLACE_TIME = 540000
-SENSOR_DIRTY_REPLACE_TIME = 108000

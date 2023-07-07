@@ -31,6 +31,7 @@ zigbee.db*
 *.db-journal
 *.pid
 tts
+zigpy_ota/
 
 # automatically downloaded dependencies
 deps

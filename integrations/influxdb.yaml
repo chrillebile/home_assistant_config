@@ -1,0 +1,14 @@
+---
+# This loads my Home Assistant frontend themes.
+#
+# https://www.home-assistant.io/integrations/influxdb
+#
+
+influxdb:
+  host: homeassistant.local
+  port: 8086
+  database: homeassistant
+  username: !secret influx_username
+  password: !secret influx_password
+  max_retries: 3
+  default_measurement: state
