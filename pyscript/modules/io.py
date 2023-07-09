@@ -13,13 +13,23 @@ def write_binary_file(filename: str, content):
         f.write(content)
 
 @pyscript_compile
-def clean_dir(dir_path: str):
-    # Check that dir extists
-    if not os.path.isdir(dir_path):
-        return
+def clean_old_files(directory: str, file_list: []) -> []:
+    file_set = set(file_list)
+    files_in_directory = set(os.listdir(directory))
 
-    # Remove dir
-    try:
-        os.rmdir(dir_path)
-    except OSError as x:
-        print("Error occured: %s : %s" % (path, x.strerror))
+    not_found_files = []
+
+    for filename in files_in_directory:
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path):
+            if filename not in file_set:
+                os.remove(file_path)
+                print(f"Deleted file: {file_path}")
+        else:
+            print(f"Ignored: {file_path} (not a file)")
+
+    for filename in file_set:
+        if filename not in files_in_directory:
+            not_found_files.append(filename)
+
+    return not_found_files

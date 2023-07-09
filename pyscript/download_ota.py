@@ -1,5 +1,5 @@
 import requests
-from io import clean_dir, write_file, write_binary_file
+from io import clean_old_files, write_file, write_binary_file
 
 @service
 def get_ikea_ota(url=None):
@@ -9,17 +9,18 @@ def get_ikea_ota(url=None):
         print(f"Request for following failed: {url}")
         return
 
-    # Cleanup
-    clean_dir("/config/zigpy_ota/ota")
-
     # Write version info down
     write_file("/config/zigpy_ota/version_info.json", resp.text)
 
-    # Download all fw
     json_resp = resp.json()
     updates = json_resp["updates"]
+
+    # Cleanup
+    to_download = set(clean_old_files("/config/zigpy_ota/ota", [update["name"] for update in updates if "DIRIGERA" not in update["name"]]))
+
+    # Download all fw
     for update in updates:
-        if "DIRIGERA" in update["name"]:
+        if update["name"] not in to_download:
             continue
 
         r = task.executor(requests.get, update["url"], verify=False)

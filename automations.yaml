@@ -2414,28 +2414,24 @@
   alias: Hallway - Off
   description: ''
   trigger:
-  - platform: device
-    type: turned_on
-    device_id: a41bee96064e8038a92acb0187cdda54
-    entity_id: light.hallway_door_dimmer_light
-    domain: light
+  - type: no_motion
+    platform: device
+    device_id: 6443fde422b73bc02eb91c967d629f02
+    entity_id: 775ee96bf5cdc0757997d885795d1c22
+    domain: binary_sensor
     for:
-      hours: 1
-      minutes: 0
-      seconds: 0
-  - platform: device
-    type: turned_on
-    device_id: c593d1d670130c0ae90fda27e4fca939
-    entity_id: light.hallway_dimmer_light
-    domain: light
-    for:
-      hours: 1
-      minutes: 0
+      hours: 0
+      minutes: 20
       seconds: 0
   condition:
   - condition: state
     entity_id: input_boolean.guest_mode
     state: 'off'
+  - type: is_no_motion
+    condition: device
+    device_id: 6443fde422b73bc02eb91c967d629f02
+    entity_id: 775ee96bf5cdc0757997d885795d1c22
+    domain: binary_sensor
   action:
   - service: light.turn_off
     data: {}
@@ -2928,4 +2924,105 @@
       title: Mold Indicator - Warning
       message: Above approximately 70 percent, mold growth might occur and the home
         should be ventilated.
+  mode: single
+- id: '1688815830087'
+  alias: Raspberry Health
+  description: ''
+  trigger:
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: 8f21e3aed87b2e54af421eca7088696d
+    type: armed_away
+  - platform: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: 8f21e3aed87b2e54af421eca7088696d
+    type: disarmed
+  - platform: state
+    entity_id:
+    - sensor.myups_status_data
+    from: OL
+  - platform: numeric_state
+    entity_id: sensor.cpu_temperatures
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+    above: 55
+  - platform: numeric_state
+    entity_id: sensor.cpu_temperatures
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+    below: 40
+  condition:
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: timer.workday
+      state: active
+  action:
+  - choose:
+    - conditions:
+      - condition: or
+        conditions:
+        - condition: device
+          device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+          domain: alarm_control_panel
+          entity_id: 8f21e3aed87b2e54af421eca7088696d
+          type: is_armed_away
+        - condition: numeric_state
+          entity_id: sensor.cpu_temperatures
+          above: 55
+      - condition: state
+        entity_id: sensor.myups_status_data
+        state: OL
+      sequence:
+      - type: turn_on
+        device_id: 14aa2ac6af59c6c759aada29a73b5d96
+        entity_id: 6547f7d1356918d6d7922a4a6bea8f63
+        domain: switch
+    default:
+    - type: turn_off
+      device_id: 14aa2ac6af59c6c759aada29a73b5d96
+      entity_id: 6547f7d1356918d6d7922a4a6bea8f63
+      domain: switch
+  mode: single
+- id: '1688836039866'
+  alias: Hallway - On
+  description: ''
+  trigger:
+  - type: motion
+    platform: device
+    device_id: 6443fde422b73bc02eb91c967d629f02
+    entity_id: 775ee96bf5cdc0757997d885795d1c22
+    domain: binary_sensor
+  condition:
+  - condition: device
+    device_id: 16422767a6f41cb2572f0bcf3b1ddb73
+    domain: alarm_control_panel
+    entity_id: 8f21e3aed87b2e54af421eca7088696d
+    type: is_disarmed
+  - condition: numeric_state
+    entity_id: sensor.hallway_motion_sensor_illuminance
+    below: 80
+  action:
+  - if:
+    - condition: state
+      entity_id: input_boolean.sleep_mode
+      state: 'on'
+    then:
+    - service: light.turn_on
+      data: {}
+      target:
+        entity_id: light.hallway_door_dimmer_light
+    else:
+    - service: light.turn_on
+      data: {}
+      target:
+        entity_id:
+        - light.hallway_dimmer_light
+        - light.hallway_door_dimmer_light
   mode: single
