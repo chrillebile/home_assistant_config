@@ -13,7 +13,7 @@ def get_ikea_ota(url=None):
     write_file("/config/zigpy_ota/version_info.json", resp.text)
 
     json_resp = resp.json()
-    updates = json_resp["updates"]
+    updates = [{"name": update["fw_binary_url"].split("/")[-1], "url": update["fw_binary_url"]} for update in json_resp]
 
     # Cleanup
     to_download = set(clean_old_files("/config/zigpy_ota/ota", [update["name"] for update in updates if "DIRIGERA" not in update["name"]]))
