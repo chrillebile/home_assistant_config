@@ -68,7 +68,7 @@
       "roborock": {
         "description": "Impostazioni generali",
         "data": {
-          "cloud_integration": "Use cloud integration"
+          "cloud_integration": "Usa integrazione cloud"
         }
       }
     }
@@ -180,13 +180,19 @@
       },
       "dock_status": {
         "name": "Stato Dock"
+      },
+      "mop_drying_status": {
+        "name": "Asciugatura mop"
+      },
+      "mop_drying_remaining_time": {
+        "name": "Tempo rimanente per l'asciugatura mop"
+      },
+      "clean_percent": {
+        "name": "Progresso pulizia"
       }
     },
     "binary_sensor": {
-      "mop_attached_1": {
-        "name": "Mop installato"
-      },
-      "mop_attached_2": {
+      "mop_attached": {
         "name": "Mop installato"
       },
       "water_box_attached": {
@@ -200,6 +206,7 @@
       "mop_mode": {
         "name": "Modalità di lavaggio",
         "state": {
+          "fast": "Veloce",
           "standard": "Standard",
           "deep": "Profondo",
           "deep_plus": "Profondo+",
@@ -210,10 +217,14 @@
         "name": "Intensità di lavaggio",
         "state": {
           "off": "Disattivato",
+          "low": "Basso",
           "mild": "Leggero",
           "moderate": "Moderato",
+          "medium": "Medio",
           "intense": "Intenso",
-          "custom": "Personalizzata"
+          "high": "Alto",
+          "custom": "Personalizzata",
+          "custom_water_flow": "Personalizzata"
         }
       }
     },
@@ -274,24 +285,24 @@
         "name": "Fine DnD"
       },
       "valley_electricity_start": {
-        "name": "Valley electricity start"
+        "name": "Inizio tariffe di basso consumo"
       },
       "valley_electricity_end": {
-        "name": "Valley electricity end"
+        "name": "Fine tariffe di basso consumo"
       }
     },
     "switch": {
       "child_lock": {
-        "name": "Child lock"
+        "name": "Blocco bambini"
       },
       "flow_led_status": {
-        "name": "Flow led status"
+        "name": "Stato LED di flusso"
       },
       "dnd_switch": {
-        "name": "DnD switch"
+        "name": "Interruttore DnD"
       },
       "valley_electricity_switch": {
-        "name": "Valley electricity switch"
+        "name": "Interruttore tariffe di basso consumo"
       }
     }
   }

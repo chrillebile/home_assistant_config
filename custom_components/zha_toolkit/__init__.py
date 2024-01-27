@@ -1,11 +1,13 @@
 import importlib
 import logging
+from typing import Optional
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-import zigpy
+from homeassistant.components.zha.core.gateway import ZHAGateway
 from homeassistant.util import dt as dt_util
 from zigpy import types as t
+from zigpy.exceptions import DeliveryError
 
 from . import params as PARDEFS
 from . import utils as u
@@ -24,12 +26,12 @@ DATA_ZHATK = "zha_toolkit"
 LOGGER = logging.getLogger(__name__)
 
 try:
-    LOADED_VERSION
+    LOADED_VERSION  # type:ignore[used-before-def]
 except NameError:
     LOADED_VERSION = ""
 
 try:
-    DEFAULT_OTAU
+    DEFAULT_OTAU  # type:ignore[used-before-def]
 except NameError:
     DEFAULT_OTAU = "/config/zigpy_ota"
 
@@ -76,7 +78,7 @@ SERVICE_SCHEMAS = {
             # vol.Optional(P.STATE_VALUE_TEMPLATE): cv.template,
             vol.Optional(P.STATE_VALUE_TEMPLATE): cv.string,
             vol.Optional(P.FORCE_UPDATE): cv.boolean,
-            vol.Optional(P.USE_CACHE): cv.boolean,
+            vol.Optional(P.USE_CACHE): vol.Any(vol.Range(0, 2), cv.boolean),
             vol.Optional(P.ALLOW_CREATE): cv.boolean,
             vol.Optional(P.READ_BEFORE_WRITE): cv.boolean,
             vol.Optional(P.READ_AFTER_WRITE): cv.boolean,
@@ -117,7 +119,7 @@ SERVICE_SCHEMAS = {
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
             vol.Optional(P.ENDPOINT): vol.Range(0, 255),
-            vol.Required(P.CLUSTER): vol.Range(0, 0xFFFF),
+            vol.Optional(P.CLUSTER): vol.Range(0, 0xFFFF),
             vol.Required(P.ATTRIBUTE): vol.Any(
                 vol.Range(0, 0xFFFF), cv.string
             ),
@@ -129,7 +131,7 @@ SERVICE_SCHEMAS = {
             # vol.Optional(P.STATE_VALUE_TEMPLATE): cv.template,
             vol.Optional(P.STATE_VALUE_TEMPLATE): cv.string,
             vol.Optional(P.FORCE_UPDATE): cv.boolean,
-            vol.Optional(P.USE_CACHE): cv.boolean,
+            vol.Optional(P.USE_CACHE): vol.Any(vol.Range(0, 2), cv.boolean),
             vol.Optional(P.ALLOW_CREATE): cv.boolean,
             vol.Optional(P.OUTCSV): cv.string,
             vol.Optional(P.CSVLABEL): cv.string,
@@ -142,7 +144,7 @@ SERVICE_SCHEMAS = {
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
             vol.Optional(P.ENDPOINT): vol.Range(0, 255),
-            vol.Required(P.CLUSTER): vol.Range(0, 0xFFFF),
+            vol.Optional(P.CLUSTER): vol.Range(0, 0xFFFF),
             vol.Required(P.ATTRIBUTE): vol.Any(
                 vol.Range(0, 0xFFFF), cv.string
             ),
@@ -162,7 +164,7 @@ SERVICE_SCHEMAS = {
             # vol.Optional(P.STATE_VALUE_TEMPLATE): cv.template,
             vol.Optional(P.STATE_VALUE_TEMPLATE): cv.string,
             vol.Optional(P.FORCE_UPDATE): cv.boolean,
-            vol.Optional(P.USE_CACHE): cv.boolean,
+            vol.Optional(P.USE_CACHE): vol.Any(vol.Range(0, 2), cv.boolean),
             vol.Optional(P.ALLOW_CREATE): cv.boolean,
             vol.Optional(P.READ_BEFORE_WRITE): cv.boolean,
             vol.Optional(P.READ_AFTER_WRITE): cv.boolean,
@@ -211,6 +213,9 @@ SERVICE_SCHEMAS = {
             vol.Optional(ATTR_COMMAND_DATA): vol.Any(
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
+            vol.Optional(P.ENDPOINT): vol.Any(
+                vol.Range(0, 255), [vol.Range(0, 255)]
+            ),
             vol.Optional(P.CLUSTER): vol.Any(
                 vol.Range(0, 0xFFFF), [vol.Range(0, 0xFFFF)]
             ),
@@ -223,7 +228,7 @@ SERVICE_SCHEMAS = {
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
             vol.Optional(P.ENDPOINT): vol.Range(0, 255),
-            vol.Required(P.CLUSTER): vol.Range(0, 0xFFFF),
+            vol.Optional(P.CLUSTER): vol.Range(0, 0xFFFF),
             vol.Required(P.ATTRIBUTE): vol.Any(
                 vol.Range(0, 0xFFFF), cv.string
             ),
@@ -245,7 +250,7 @@ SERVICE_SCHEMAS = {
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
             vol.Optional(P.ENDPOINT): vol.Range(0, 255),
-            vol.Required(P.CLUSTER): vol.Range(0, 0xFFFF),
+            vol.Optional(P.CLUSTER): vol.Range(0, 0xFFFF),
             vol.Required(P.ATTRIBUTE): vol.Any(
                 vol.Range(0, 0xFFFF),
                 [vol.Any(vol.Range(0, 0xFFFF), cv.string)],
@@ -311,7 +316,11 @@ SERVICE_SCHEMAS = {
         extra=vol.ALLOW_EXTRA,
     ),
     S.GET_ROUTES_AND_NEIGHBOURS: vol.Schema(
-        {},
+        {
+            vol.Required(ATTR_IEEE): vol.Any(
+                cv.entity_id_or_uuid, t.EUI64.convert
+            ),
+        },
         extra=vol.ALLOW_EXTRA,
     ),
     S.GET_ZLL_GROUPS: vol.Schema(
@@ -370,6 +379,9 @@ SERVICE_SCHEMAS = {
     S.LEAVE: vol.Schema(
         {
             vol.Required(ATTR_IEEE): vol.Any(
+                cv.entity_id_or_uuid, t.EUI64.convert
+            ),
+            vol.Required(ATTR_COMMAND_DATA): vol.Any(
                 cv.entity_id_or_uuid, t.EUI64.convert
             ),
         },
@@ -456,10 +468,21 @@ SERVICE_SCHEMAS = {
         },
         extra=vol.ALLOW_EXTRA,
     ),
+    S.TUYA_MAGIC: vol.Schema(
+        {
+            vol.Required(ATTR_IEEE): vol.Any(
+                cv.entity_id_or_uuid, t.EUI64.convert
+            ),
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
     S.UNBIND_COORDINATOR: vol.Schema(
         {
             vol.Required(ATTR_IEEE): vol.Any(
                 cv.entity_id_or_uuid, t.EUI64.convert
+            ),
+            vol.Optional(P.ENDPOINT): vol.Any(
+                vol.Range(0, 255), [vol.Range(0, 255)]
             ),
             vol.Optional(P.CLUSTER): vol.Any(
                 vol.Range(0, 0xFFFF), [vol.Range(0, 0xFFFF)]
@@ -638,18 +661,33 @@ def register_services(hass):  # noqa: C901
     global LOADED_VERSION  # pylint: disable=global-statement
     hass_ref = hass
 
+    is_response_data_supported = u.is_ha_ge("2023.7.0")
+
+    if is_response_data_supported:
+        from homeassistant.core import SupportsResponse
+
     async def toolkit_service(service):
         """Run command from toolkit module."""
         LOGGER.info("Running ZHA Toolkit service: %s", service)
         global LOADED_VERSION  # pylint: disable=global-variable-not-assigned
 
-        try:
-            zha_gw = hass_ref.data["zha"]["zha_gateway"]
-        except KeyError:
+        zha = hass_ref.data["zha"]
+        zha_gw: Optional[ZHAGateway] = None
+        if isinstance(zha, dict):
+            zha_gw = zha.get("zha_gateway", None)
+        else:
+            zha_gw = zha.gateway
+
+        if zha_gw is None:
             LOGGER.error(
-                "Missing hass.data['zha']['zha_gateway'] - not running %s",
+                "Missing hass.data['zha']/gateway - not found/running %s - on %r",
                 service,
+                zha,
             )
+        LOGGER.debug(
+            "Got hass.data['zha']/gateway %r",
+            zha_gw,
+        )
 
         # importlib.reload(PARDEFS)
         # S = PARDEFS.SERVICES
@@ -682,7 +720,7 @@ def register_services(hass):  # noqa: C901
         # Decode parameters
         params = u.extractParams(service)
 
-        app = zha_gw.application_controller
+        app = zha_gw.application_controller  # type: ignore
 
         ieee = await u.get_ieee(app, zha_gw, ieee_str)
 
@@ -701,7 +739,7 @@ def register_services(hass):  # noqa: C901
         # Preload event_data
         event_data = {
             "zha_toolkit_version": u.getVersion(),
-            "zigpy_version": zigpy.__version__,
+            "zigpy_version": u.getZigpyVersion(),
             "zigpy_rf_version": u.get_radio_version(app),
             "ieee_org": ieee_str,
             "ieee": str(ieee),
@@ -738,9 +776,10 @@ def register_services(hass):  # noqa: C901
         LOGGER.debug("Handler: %s", handler)
 
         handler_exception = None
+        handler_result = None
         try:
-            await handler(
-                zha_gw.application_controller,
+            handler_result = await handler(
+                zha_gw.application_controller,  # type: ignore
                 zha_gw,
                 ieee,
                 cmd,
@@ -764,21 +803,36 @@ def register_services(hass):  # noqa: C901
                 LOGGER.debug(
                     "Fire %s -> %s", params[p.EVT_SUCCESS], event_data
                 )
-                zha_gw._hass.bus.fire(params[p.EVT_SUCCESS], event_data)
+                u.get_hass(zha_gw).bus.fire(params[p.EVT_SUCCESS], event_data)
         else:
             if params[p.EVT_FAIL] is not None:
                 LOGGER.debug("Fire %s -> %s", params[p.EVT_FAIL], event_data)
-                zha_gw._hass.bus.fire(params[p.EVT_FAIL], event_data)
+                u.get_hass(zha_gw).bus.fire(params[p.EVT_FAIL], event_data)
 
         if params[p.EVT_DONE] is not None:
             LOGGER.debug("Fire %s -> %s", params[p.EVT_DONE], event_data)
-            zha_gw._hass.bus.fire(params[p.EVT_DONE], event_data)
+            u.get_hass(zha_gw).bus.fire(params[p.EVT_DONE], event_data)
 
         if handler_exception is not None:
-            raise handler_exception
+            LOGGER.error(
+                "Exception '%s' for service call with data '%r'",
+                handler_exception,
+                event_data,
+            )
+            if params[p.FAIL_EXCEPTION] or not isinstance(
+                handler_exception, DeliveryError
+            ):
+                raise handler_exception
 
         if not event_data["success"] and params[p.FAIL_EXCEPTION]:
             raise Exception("Success expected, but failed")
+
+        if is_response_data_supported:
+            if service.return_response:
+                if handler_result is None:
+                    return event_data
+
+                return handler_result
 
     # Set up all service schemas
     for key, value in SERVICE_SCHEMAS.items():
@@ -788,12 +842,22 @@ def register_services(hass):  # noqa: C901
             # by denying this option
             value.extend(DENY_COMMAND_SCHEMA)
         LOGGER.debug(f"Add service {DOMAIN}.{key}")
-        hass.services.async_register(
-            DOMAIN,
-            key,
-            toolkit_service,
-            schema=value,
-        )
+        if is_response_data_supported:
+            # See https://developers.home-assistant.io/docs/dev_101_services/#response-data
+            hass.services.async_register(
+                DOMAIN,
+                key,
+                toolkit_service,
+                schema=value,
+                supports_response=SupportsResponse.OPTIONAL,  # type:ignore[undefined-variable]
+            )
+        else:
+            hass.services.async_register(
+                DOMAIN,
+                key,
+                toolkit_service,
+                schema=value,
+            )
 
     LOADED_VERSION = u.getVersion()
 
@@ -824,7 +888,7 @@ async def command_handler_default(
         if cmd in CMD_TO_INTERNAL_MAP:
             cmd = CMD_TO_INTERNAL_MAP.get(cmd)
 
-        await default.default(
+        return await default.default(
             app, listener, ieee, cmd, data, service, params, event_data
         )
 
@@ -862,4 +926,4 @@ async def _register_services(hass):
 async def command_handler_register_services(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
-    await _register_services(listener._hass)
+    await _register_services(u.get_hass(listener))

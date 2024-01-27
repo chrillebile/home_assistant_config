@@ -16,7 +16,7 @@ from homeassistant.util import slugify
 from roborock.api import AttributeCache, RoborockClient
 from roborock.command_cache import CacheableAttribute
 
-from . import DomainData, RoborockHassDeviceInfo
+from . import EntryData, RoborockHassDeviceInfo
 from .const import DOMAIN
 from .coordinator import RoborockDataUpdateCoordinator
 from .device import RoborockEntity
@@ -59,7 +59,7 @@ SWITCH_DESCRIPTIONS: list[RoborockSwitchDescription] = [
         update_value=lambda cache, value: cache.update_value({"status": 1 if value else 0}),
         attribute="status",
         key="flow_led_status",
-        name="Flow led status",
+        name="Status Indicator Light",
         translation_key="flow_led_status",
         icon="mdi:alarm-light-outline",
         entity_category=EntityCategory.CONFIG,
@@ -91,7 +91,7 @@ SWITCH_DESCRIPTIONS: list[RoborockSwitchDescription] = [
         else cache.close_value(),
         attribute="enabled",
         key="valley_electricity_switch",
-        name="Valley Electricity switch",
+        name="Off-Peak charging switch",
         translation_key="valley_electricity_switch",
         icon="mdi:bell-cancel",
         entity_category=EntityCategory.CONFIG,
@@ -105,8 +105,8 @@ async def async_setup_entry(
         async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Roborock switch platform."""
-    domain_data: DomainData = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = domain_data.get("coordinators")
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = [device_entry_data["coordinator"] for device_entry_data in domain_data.get("devices").values()]
     possible_entities: list[
         tuple[RoborockDataUpdateCoordinator, RoborockSwitchDescription]
     ] = [

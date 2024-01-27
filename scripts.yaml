@@ -10,7 +10,7 @@ send_love:
       - service: notify.mobile_app_felicia_phone
         data:
           message: Älskar dig, puss! ❤️
-          title: Kärlek till bae
+          title: "Kärlek till bae \U0001F970"
     - conditions:
       - condition: template
         value_template: '{{ context.user_id == "78fb6be1593e43dbab0b5e40f0258838"
@@ -26,27 +26,37 @@ send_love:
 camera_off:
   alias: Camera - Off
   sequence:
-  - type: turn_on
-    device_id: 6af7a88d009637d36a125308d21def3a
-    entity_id: switch.office_camera_privacy
-    domain: switch
-  - type: turn_off
-    device_id: 6af7a88d009637d36a125308d21def3a
-    entity_id: switch.office_camera_indicator_led
-    domain: switch
+  - repeat:
+      count: 2
+      sequence:
+      - parallel:
+        - type: turn_on
+          device_id: b242c7fca7e6c0c7720acf4fa712e097
+          entity_id: 0da14fe56f4629b2ce77f412da89b05a
+          domain: switch
+        - type: turn_on
+          device_id: 6af7a88d009637d36a125308d21def3a
+          entity_id: 32bcc0978a9fc92f998f37bacd2787f4
+          domain: switch
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 3
+          milliseconds: 0
   mode: single
   icon: mdi:cctv-off
 camera_on:
   alias: Camera - On
   sequence:
-  - type: turn_on
-    device_id: 6af7a88d009637d36a125308d21def3a
-    entity_id: switch.office_camera_indicator_led
-    domain: switch
-  - type: turn_off
-    device_id: 6af7a88d009637d36a125308d21def3a
-    entity_id: switch.office_camera_privacy
-    domain: switch
+  - parallel:
+    - type: turn_off
+      device_id: 6af7a88d009637d36a125308d21def3a
+      entity_id: 32bcc0978a9fc92f998f37bacd2787f4
+      domain: switch
+    - type: turn_off
+      device_id: b242c7fca7e6c0c7720acf4fa712e097
+      entity_id: 0da14fe56f4629b2ce77f412da89b05a
+      domain: switch
   mode: single
   icon: mdi:cctv
 alarm_triggered_clear:
@@ -56,9 +66,14 @@ alarm_triggered_clear:
     data: {}
     target:
       entity_id: timer.larm_triggered
+  - device_id: b242c7fca7e6c0c7720acf4fa712e097
+    domain: select
+    entity_id: 2a86d08575160c0c811d73fb7d6c987b
+    type: select_option
+    option: 'off'
   - device_id: 6af7a88d009637d36a125308d21def3a
     domain: button
-    entity_id: button.office_camera_manual_alarm_stop
+    entity_id: 70ac05ecd17b01e48b2c78bbee86ba9f
     type: press
   - service: script.camera_off
     data: {}

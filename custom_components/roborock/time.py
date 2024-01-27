@@ -17,7 +17,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
-from . import DomainData, RoborockDataUpdateCoordinator
+from . import EntryData, RoborockDataUpdateCoordinator
 from .const import DOMAIN
 from .device import RoborockEntity
 from .roborock_typing import RoborockHassDeviceInfo
@@ -85,7 +85,7 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
     ),
     RoborockTimeDescription(
         key="valley_electricity_start",
-        name="Valley electricity start",
+        name="Off-Peak charging start",
         translation_key="valley_electricity_start",
         icon="mdi:bell-ring",
         cache_key=CacheableAttribute.valley_electricity_timer,
@@ -105,7 +105,7 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
     ),
     RoborockTimeDescription(
         key="valley_electricity_end",
-        name="Valley electricity end",
+        name="Off-Peak charging end",
         translation_key="valley_electricity_end",
         icon="mdi:bell-ring",
         cache_key=CacheableAttribute.valley_electricity_timer,
@@ -132,8 +132,8 @@ async def async_setup_entry(
         async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Only vacuums with mop should have binary sensor registered."""
-    domain_data: DomainData = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = domain_data.get("coordinators")
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = [device_entry_data["coordinator"] for device_entry_data in domain_data.get("devices").values()]
 
     possible_entities: list[
         tuple[RoborockDataUpdateCoordinator, RoborockTimeDescription]

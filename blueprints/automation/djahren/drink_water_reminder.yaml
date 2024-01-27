@@ -1,0 +1,174 @@
+blueprint:
+  name: Drinking Water Tracker & Reminder
+  description: 'Track your water drinking and remind yourself when you haven''t for
+    a while. This blueprint requires you to create 3 input helpers: Date & Time, Button,
+    and Timer.'
+  source_url: https://gist.github.com/djahren/322ce13a857b2099956429005669fe4a
+  domain: automation
+  input:
+    notify_device:
+      name: Device to notify
+      description: Device needs to run the Home Assistant app to receive actionable
+        notifications.
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+    last_drank_helper:
+      name: Date and Time Helper
+      description: Create a Date and Time helper to track the last time you drank
+        water.
+      selector:
+        entity:
+          domain:
+          - input_datetime
+          multiple: false
+    drank_water_button_helper:
+      name: Drank Water Button Helper
+      description: 'Create a button helper to press indicating you''ve drank water.
+        This can also be added as a widget on your phone''s home screen.
+
+        To create more triggers (such as an NFC tag on your water bottle), create
+        a new automation with your desired triggers and use the Call Service action,
+        calling the Input Button: Press service.'
+      selector:
+        entity:
+          domain:
+          - input_button
+          multiple: false
+    snooze_timer_helper:
+      name: Snooze Timer Helper
+      description: Create a timer helper that is set to the duration you'd like to
+        snooze notifications for. Reccomended between 10 and 30 minutes.
+      selector:
+        entity:
+          domain:
+          - timer
+          multiple: false
+    reminder_delay:
+      name: Reminder Delay
+      description: Number of hours after drinking water to send a reminder.
+      default: 4
+      selector:
+        number:
+          min: 1.0
+          max: 12.0
+          mode: slider
+          step: 1.0
+    repeat_every_hour:
+      name: Repeat Every Hour
+      description: This will repeat a reminder every hour (between the times specified
+        below) until the water tracking helper is updated. This won't create multiple
+        notifications, only update an existing one.
+      default: true
+      selector:
+        boolean: {}
+    reminder_start_time:
+      name: Reminder Start Time
+      description: Don't send reminders before this time.
+      default: '10:00'
+      selector:
+        time: {}
+    reminder_end_time:
+      name: Reminder End Time
+      description: Don't send reminders after this time.
+      default: '22:00'
+      selector:
+        time: {}
+mode: parallel
+max_exceeded: silent
+trigger:
+- platform: state
+  entity_id:
+  - !input drank_water_button_helper
+  id: button
+- platform: time_pattern
+  minutes: '*'
+  id: every_minute
+- platform: event
+  event_type: mobile_app_notification_action
+  event_data:
+    tag: drink-water-reminder
+  id: notification_action
+- platform: state
+  entity_id:
+  - !input snooze_timer_helper
+  to: idle
+  from: active
+  id: timer_end
+variables:
+  last_drank_helper_id: !input last_drank_helper
+  reminder_delay: !input reminder_delay
+  repeat_every_hour: !input repeat_every_hour
+  timer_helper: !input snooze_timer_helper
+  uid: '{{ this.entity_id.split(''.'')[1].upper() }}'
+  drank_water_action: DRANK_WATER_{{ uid }}
+  water_snooze_action: WATER_SNOOZE_{{ uid }}
+  action: '{{ trigger.event.data.action if trigger.id == ''notification_action'' else
+    ''''}}'
+  snooze_minutes: '{{ state_attr(timer_helper, "duration").split(":")[1] }}'
+  run_reminder: '{% set delay = reminder_delay|int %}{% set repeat = repeat_every_hour|bool
+    %} {% set time_since = now().replace(tzinfo=None) - (states(last_drank_helper_id)
+    | as_datetime).replace(tzinfo=None) %} {% set hours_ago = time_since.seconds //
+    3600 + time_since.days * 24 %} {% set remaining_minutes = time_since.seconds //
+    60 %} {% if hours_ago < delay %}off{% else %} {{ remaining_minutes % 60 == 0 and
+    (repeat or (not repeat and hours_ago == delay)) }} {% endif %}'
+condition:
+- condition: template
+  value_template: '{{ trigger.id != "every_minute" or run_reminder }}'
+action:
+- choose:
+  - conditions:
+    - condition: or
+      conditions:
+      - condition: and
+        conditions:
+        - condition: trigger
+          id: every_minute
+        - condition: template
+          value_template: '{{ run_reminder }}'
+        - condition: time
+          after: !input reminder_start_time
+          before: !input reminder_end_time
+      - condition: trigger
+        id: timer_end
+    sequence:
+    - type: notify
+      domain: mobile_app
+      device_id: !input notify_device
+      message: You last drank water {{ states(last_drank_helper_id) | as_datetime
+        | relative_time}} ago. Drink more now?
+      data:
+        tag: drink-water-reminder
+        actions:
+        - action: '{{ drank_water_action }}'
+          title: "I drank some! \U0001F4A7"
+        - action: '{{ water_snooze_action }}'
+          title: Snooze ({{snooze_minutes}}m)
+  - conditions:
+    - condition: template
+      value_template: '{{ action == water_snooze_action }}'
+    sequence:
+    - service: timer.start
+      data: {}
+      target:
+        entity_id: !input snooze_timer_helper
+  - conditions:
+    - condition: or
+      conditions:
+      - condition: trigger
+        id: button
+      - condition: template
+        value_template: '{{ action == drank_water_action }}'
+    sequence:
+    - service: input_datetime.set_datetime
+      data:
+        timestamp: '{{as_timestamp(now())}}'
+      target:
+        entity_id: !input last_drank_helper
+    - type: notify
+      domain: mobile_app
+      device_id: !input notify_device
+      message: clear_notification
+      data:
+        tag: drink-water-reminder

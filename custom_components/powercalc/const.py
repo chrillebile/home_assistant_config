@@ -3,7 +3,14 @@
 from datetime import timedelta
 from typing import Literal
 
-from homeassistant.backports.enum import StrEnum
+from awesomeversion.awesomeversion import AwesomeVersion
+from homeassistant.const import __version__ as HA_VERSION  # noqa
+
+if AwesomeVersion(HA_VERSION) >= AwesomeVersion("2023.8.0"):
+    from enum import StrEnum
+else:
+    from homeassistant.backports.enum import StrEnum  # pragma: no cover
+
 from homeassistant.components.utility_meter.const import DAILY, MONTHLY, WEEKLY
 from homeassistant.const import (
     STATE_NOT_HOME,
@@ -12,13 +19,14 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
 
-MIN_HA_VERSION = "2022.11"
+MIN_HA_VERSION = "2023.1"
 
 DOMAIN = "powercalc"
 DOMAIN_CONFIG = "config"
 
 DATA_CALCULATOR_FACTORY = "calculator_factory"
 DATA_CONFIGURED_ENTITIES = "configured_entities"
+DATA_DISCOVERY_MANAGER = "discovery_manager"
 DATA_DISCOVERED_ENTITIES = "discovered_entities"
 DATA_DOMAIN_ENTITIES = "domain_entities"
 DATA_USED_UNIQUE_IDS = "used_unique_ids"
@@ -30,8 +38,11 @@ ENTRY_DATA_POWER_ENTITY = "_power_entity"
 
 DUMMY_ENTITY_ID = "sensor.dummy"
 
+CONF_ALL = "all"
 CONF_AREA = "area"
+CONF_AUTOSTART = "autostart"
 CONF_CALIBRATE = "calibrate"
+CONF_COMPOSITE = "composite"
 CONF_CREATE_GROUP = "create_group"
 CONF_CREATE_DOMAIN_GROUPS = "create_domain_groups"
 CONF_CREATE_ENERGY_SENSOR = "create_energy_sensor"
@@ -80,7 +91,9 @@ CONF_MIN_POWER = "min_power"
 CONF_MAX_POWER = "max_power"
 CONF_ON_TIME = "on_time"
 CONF_TEMPLATE = "template"
+CONF_REPEAT = "repeat"
 CONF_SENSOR_TYPE = "sensor_type"
+CONF_SENSORS = "sensors"
 CONF_SUB_PROFILE = "sub_profile"
 CONF_SLEEP_POWER = "sleep_power"
 CONF_UNAVAILABLE_POWER = "unavailable_power"
@@ -89,9 +102,11 @@ CONF_VALUE = "value"
 CONF_VALUE_TEMPLATE = "value_template"
 CONF_VOLTAGE = "voltage"
 CONF_WLED = "wled"
+CONF_WILDCARD = "wildcard"
 CONF_STATES_POWER = "states_power"
 CONF_START_TIME = "start_time"
 CONF_STANDBY_POWER = "standby_power"
+CONF_STRATEGIES = "strategies"
 CONF_SUB_GROUPS = "sub_groups"
 CONF_CALCULATION_ENABLED_CONDITION = "calculation_enabled_condition"
 CONF_DISABLE_STANDBY_POWER = "disable_standby_power"
@@ -99,6 +114,8 @@ CONF_CUSTOM_MODEL_DIRECTORY = "custom_model_directory"
 CONF_UTILITY_METER_OFFSET = "utility_meter_offset"
 CONF_UTILITY_METER_TYPES = "utility_meter_types"
 CONF_UTILITY_METER_TARIFFS = "utility_meter_tariffs"
+CONF_OR = "or"
+CONF_AND = "and"
 
 # Redefine constants from integration component.
 # Has been refactored in HA 2022.4, we need to support older HA versions as well.
@@ -158,6 +175,8 @@ SERVICE_RESET_ENERGY = "reset_energy"
 SERVICE_INCREASE_DAILY_ENERGY = "increase_daily_energy"
 SERVICE_CALIBRATE_UTILITY_METER = "calibrate_utility_meter"
 SERVICE_CALIBRATE_ENERGY = "calibrate_energy"
+SERVICE_SWITCH_SUB_PROFILE = "switch_sub_profile"
+SERVICE_CHANGE_GUI_CONFIGURATION = "change_gui_config"
 
 SIGNAL_POWER_SENSOR_STATE_CHANGE = "powercalc_power_sensor_state_change"
 
@@ -167,6 +186,7 @@ OFF_STATES = (STATE_OFF, STATE_NOT_HOME, STATE_STANDBY, STATE_UNAVAILABLE)
 class CalculationStrategy(StrEnum):
     """Possible virtual power calculation strategies."""
 
+    COMPOSITE = "composite"
     LUT = "lut"
     LINEAR = "linear"
     FIXED = "fixed"
@@ -180,9 +200,11 @@ class SensorType(StrEnum):
     DAILY_ENERGY = "daily_energy"
     VIRTUAL_POWER = "virtual_power"
     GROUP = "group"
+    REAL_POWER = "real_power"
 
 
 class PowercalcDiscoveryType(StrEnum):
     DOMAIN_GROUP = "domain_group"
     STANDBY_GROUP = "standby_group"
     LIBRARY = "library"
+    USER_YAML = "user_yaml"

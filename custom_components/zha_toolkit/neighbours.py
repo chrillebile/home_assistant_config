@@ -7,13 +7,14 @@ import os
 from random import uniform
 
 import zigpy.zdo.types as zdo_t
-from homeassistant.util.json import save_json
 from zigpy.exceptions import DeliveryError
+
+from . import utils as u
 
 LOGGER = logging.getLogger(__name__)
 
 
-async def routes_and_neighbours(
+async def get_routes_and_neighbours(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
     if ieee is None:
@@ -21,17 +22,17 @@ async def routes_and_neighbours(
         return
 
     LOGGER.debug("Getting routes and neighbours: %s", service)
-    device = app.get_device(ieee=ieee)
+    device = await u.get_device(app, listener, ieee)
     event_data["result"] = await _routes_and_neighbours(device, listener)
 
     ieee_tail = "".join([f"{o:02X}" for o in device.ieee])
 
     fname = os.path.join(
-        listener._hass.config.config_dir,
+        u.get_hass(listener).config.config_dir,
         "scans",
         f"routes_and_neighbours_{ieee_tail}.json",
     )
-    save_json(fname, event_data["result"])
+    u.helper_save_json(fname, event_data["result"])
 
     LOGGER.debug("Wrote scan results to '%s'", fname)
 
@@ -74,11 +75,11 @@ async def all_routes_and_neighbours(
     event_data["result"] = all_routes
 
     all_routes_name = os.path.join(
-        listener._hass.config.config_dir,
+        u.get_hass(listener).config.config_dir,
         "scans",
         "all_routes_and_neighbours.json",
     )
-    save_json(all_routes_name, all_routes)
+    u.helper_save_json(all_routes_name, all_routes)
 
 
 async def async_get_neighbours(device):
@@ -122,13 +123,22 @@ async def async_get_neighbours(device):
             LOGGER.debug("%s: Could not deliver 'Mgmt_Lqi_req'", device.ieee)
             break
 
-        # LOGGER.debug(f"NEIGHBORS: {val!r}")
-        neighbours = val.neighbor_table_list
+        LOGGER.debug(f"NEIGHBORS: {val!r}")
+
+        if hasattr(val, "neighbor_table_list"):
+            neighbours = val.neighbor_table_list
+            entries = val.entries
+        else:
+            neighbours = val.NeighborTableList
+            entries = val.Entries
+
         for neighbour in neighbours:
             result.append(_process_neighbour(neighbour))
             idx += 1
-        if idx >= val.entries:
+
+        if idx >= entries:
             break
+
         await asyncio.sleep(uniform(1.0, 1.5))
 
     return sorted(result, key=lambda x: x["ieee"])

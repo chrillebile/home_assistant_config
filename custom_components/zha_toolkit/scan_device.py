@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 
 from zigpy import types as t
 from zigpy.exceptions import ControllerException, DeliveryError
@@ -12,6 +11,9 @@ from . import utils as u
 from .params import INTERNAL_PARAMS as p
 
 LOGGER = logging.getLogger(__name__)
+
+
+ACCESS_CONTROL_MAP = {0x01: "READ", 0x02: "WRITE", 0x04: "REPORT"}
 
 
 @u.retryable(
@@ -27,13 +29,6 @@ async def read_attr(cluster, attrs, manufacturer=None):
     return await cluster.read_attributes(
         attrs, allow_cache=False, manufacturer=manufacturer
     )
-
-
-@u.retryable(
-    (DeliveryError, asyncio.CancelledError, asyncio.TimeoutError), tries=3
-)
-async def wrapper(cmd, *args, **kwargs):
-    return await cmd(*args, **kwargs)
 
 
 async def scan_results(device, endpoints=None, manufacturer=None, tries=3):
@@ -180,7 +175,7 @@ async def discover_attributes_extended(cluster, manufacturer=None, tries=3):
 
     while not done:  # Repeat until all attributes are discovered or timeout
         try:
-            done, rsp = await wrapper(
+            done, rsp = await u.retry_wrapper(
                 cluster.discover_attributes_extended,
                 attr_id,  # Start attribute identifier
                 16,  # Number of attributes to discover in this request
@@ -224,9 +219,10 @@ async def discover_attributes_extended(cluster, manufacturer=None, tries=3):
             attr_type = foundation.DATA_TYPES.get(attr_rec.datatype)
             access_acl = t.uint8_t(attr_rec.acl)
 
-            if attr_rec.datatype not in [0x48] and (
-                access_acl & foundation.AttributeAccessControl.READ != 0
-            ):
+            # Note: reading back Array type was fixed in zigpy 0.58.1 .
+            if (
+                u.is_zigpy_ge("0.58.1") or attr_rec.datatype not in [0x48]
+            ) and (access_acl & foundation.AttributeAccessControl.READ != 0):
                 to_read.append(attr_id)
 
             attr_type_hex = f"0x{attr_rec.datatype:02x}"
@@ -238,13 +234,16 @@ async def discover_attributes_extended(cluster, manufacturer=None, tries=3):
                 ]
             else:
                 attr_type = attr_type_hex
-            try:
-                access = re.sub(
-                    "^.*\\.",
-                    "",
-                    str(foundation.AttributeAccessControl(access_acl)),
+
+            if access_acl != 0:
+                access = "|".join(
+                    [
+                        s
+                        for x, s in ACCESS_CONTROL_MAP.items()
+                        if x & access_acl != 0
+                    ]
                 )
-            except ValueError:
+            else:
                 access = "undefined"
 
             result[attr_id] = {
@@ -277,12 +276,22 @@ async def discover_attributes_extended(cluster, manufacturer=None, tries=3):
                     except UnicodeDecodeError:
                         value = value.hex()
                 result[attr_id]["attribute_value"] = value
-        except (DeliveryError, asyncio.TimeoutError) as ex:
+        except (
+            DeliveryError,
+            asyncio.TimeoutError,
+        ) as ex:
             LOGGER.error(
                 "Couldn't read 0x%04x/0x%04x: %s",
                 cluster.cluster_id,
                 attr_id,
                 ex,
+            )
+        except Exception as ex_unexpected:
+            LOGGER.error(
+                "Unexpected Exception while reading 0x%04x/0x%04x: %s",
+                cluster.cluster_id,
+                attr_id,
+                ex_unexpected,
             )
         chunk, to_read = to_read[:4], to_read[4:]
         await asyncio.sleep(0.2)
@@ -303,7 +312,7 @@ async def discover_commands_received(
 
     while not done:
         try:
-            done, rsp = await wrapper(
+            done, rsp = await u.retry_wrapper(
                 cluster.discover_commands_received,
                 cmd_id,  # Start index of commands to discover
                 16,  # Number of commands to discover
@@ -367,7 +376,7 @@ async def discover_commands_generated(
 
     while not done:
         try:
-            done, rsp = await wrapper(
+            done, rsp = await u.retry_wrapper(
                 cluster.discover_commands_generated,
                 cmd_id,  # Start index of commands to discover
                 16,  # Number of commands to discover this run
@@ -428,7 +437,7 @@ async def scan_device(
 
     LOGGER.debug("Running 'scan_device'")
 
-    device = app.get_device(ieee)
+    device = await u.get_device(app, listener, ieee)
 
     endpoints = params[p.EP_ID]
     manf = params[p.MANF]

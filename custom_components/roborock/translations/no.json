@@ -183,10 +183,7 @@
       }
     },
     "binary_sensor": {
-      "mop_attached_1": {
-        "name": "Mop attached"
-      },
-      "mop_attached_2": {
+      "mop_attached": {
         "name": "Mop attached"
       },
       "water_box_attached": {
@@ -213,7 +210,8 @@
           "mild": "Mild",
           "moderate": "Moderate",
           "intense": "Intense",
-          "custom": "Custom"
+          "custom": "Custom",
+          "custom_water_flow": "Custom"
         }
       }
     },
@@ -274,10 +272,10 @@
         "name": "DnD end"
       },
       "valley_electricity_start": {
-        "name": "Valley electricity start"
+        "name": "Off-Peak charging start"
       },
       "valley_electricity_end": {
-        "name": "Valley electricity end"
+        "name": "Off-Peak charging end"
       }
     },
     "switch": {
@@ -285,7 +283,7 @@
         "name": "Child lock"
       },
       "flow_led_status": {
-        "name": "Flow led status"
+        "name": "Status Indicator Light"
       },
       "dnd_switch": {
         "name": "DnD switch"

@@ -10,7 +10,6 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
-    TIME_HOURS,
     UnitOfEnergy,
     UnitOfPower,
     UnitOfTime,
@@ -66,7 +65,11 @@ async def create_energy_sensor(
                 f"No energy sensor with id {energy_sensor_id} found in your HA instance. "
                 "Double check `energy_sensor_id` setting",
             )
-        return RealEnergySensor(entity_entry)
+        return RealEnergySensor(
+            entity_entry.entity_id,
+            entity_entry.name or entity_entry.original_name,
+            entity_entry.unique_id,
+        )
 
     # User specified an existing power sensor with "power_sensor_id" option. Try to find a corresponding energy sensor
     if CONF_POWER_SENSOR_ID in sensor_config and isinstance(
@@ -82,16 +85,19 @@ async def create_energy_sensor(
             real_energy_sensor = find_related_real_energy_sensor(hass, power_sensor)
             if real_energy_sensor:
                 _LOGGER.debug(
-                    f"Found existing energy sensor '{real_energy_sensor.entity_id}' "
-                    f"for the power sensor '{power_sensor.entity_id}'",
+                    "Found existing energy sensor '%s' for the power sensor '%s'",
+                    real_energy_sensor.entity_id,
+                    power_sensor.entity_id,
                 )
                 return real_energy_sensor
             _LOGGER.debug(
-                f"No existing energy sensor found for the power sensor '{power_sensor.entity_id}'",
+                "No existing energy sensor found for the power sensor '%s'",
+                power_sensor.entity_id,
             )
         else:
             _LOGGER.debug(
-                f"Forced energy sensor generation for the power sensor '{power_sensor.entity_id}'",
+                "Forced energy sensor generation for the power sensor '%s'",
+                power_sensor.entity_id,
             )
 
     # Create an energy sensor based on riemann integral integration, which uses the virtual powercalc sensor as source.
@@ -123,7 +129,7 @@ async def create_energy_sensor(
         name=name,
         round_digits=sensor_config.get(CONF_ENERGY_SENSOR_PRECISION),  # type: ignore
         unit_prefix=unit_prefix,
-        unit_time=TIME_HOURS,  # type: ignore
+        unit_time=UnitOfTime.HOURS,
         integration_method=sensor_config.get(CONF_ENERGY_INTEGRATION_METHOD)
         or DEFAULT_ENERGY_INTEGRATION_METHOD,
         powercalc_source_entity=source_entity.entity_id,
@@ -176,7 +182,12 @@ def find_related_real_energy_sensor(
     if not energy_sensors:
         return None
 
-    return RealEnergySensor(energy_sensors[0])
+    entity_entry = energy_sensors[0]
+    return RealEnergySensor(
+        entity_entry.entity_id,
+        entity_entry.name or entity_entry.original_name,
+        entity_entry.unique_id,
+    )
 
 
 class EnergySensor(BaseEntity):
@@ -217,6 +228,7 @@ class VirtualEnergySensor(IntegrationSensor, EnergySensor):
         self._powercalc_source_domain = powercalc_source_domain
         self._sensor_config = sensor_config
         self.entity_id = entity_id
+        self._attr_device_class = SensorDeviceClass.ENERGY
         if entity_category:
             self._attr_entity_category = EntityCategory(entity_category)
 
@@ -241,12 +253,12 @@ class VirtualEnergySensor(IntegrationSensor, EnergySensor):
 
     @callback
     def async_reset(self) -> None:
-        _LOGGER.debug(f"{self.entity_id}: Reset energy sensor")
+        _LOGGER.debug("%s: Reset energy sensor", self.entity_id)
         self._state = 0
         self.async_write_ha_state()
 
     async def async_calibrate(self, value: str) -> None:
-        _LOGGER.debug(f"{self.entity_id}: Calibrate energy sensor to: {value}")
+        _LOGGER.debug("%s: Calibrate energy sensor to: %s", self.entity_id, value)
         self._state = Decimal(value)
         self.async_write_ha_state()
 
@@ -254,16 +266,22 @@ class VirtualEnergySensor(IntegrationSensor, EnergySensor):
 class RealEnergySensor(EnergySensor):
     """Contains a reference to an existing energy sensor entity."""
 
-    def __init__(self, entity_entry: er.RegistryEntry) -> None:
-        self._entity_entry = entity_entry
-        self.entity_id = self._entity_entry.entity_id
+    def __init__(
+        self,
+        entity_id: str,
+        name: str | None = None,
+        unique_id: str | None = None,
+    ) -> None:
+        self.entity_id = entity_id
+        self._name = name
+        self._unique_id = unique_id
 
     @property
     def name(self) -> str | None:
         """Return the name of the sensor."""
-        return self._entity_entry.name or self._entity_entry.original_name
+        return self._name
 
     @property
     def unique_id(self) -> str | None:
         """Return the unique_id of the sensor."""
-        return self._entity_entry.unique_id
+        return self._unique_id

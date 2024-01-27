@@ -12,6 +12,10 @@ from .params import INTERNAL_PARAMS as p
 LOGGER = logging.getLogger(__name__)
 
 
+def add_task_info(event_data, task):
+    event_data["task"] = {"name": task.get_name(), "done": task.done()}
+
+
 async def leave(app, listener, ieee, cmd, data, service, params, event_data):
     if ieee is None or not data:
         raise ValueError("Need 'ieee' and command_data'")
@@ -25,7 +29,16 @@ async def leave(app, listener, ieee, cmd, data, service, params, event_data):
 
     parent = await u.get_device(app, listener, data)
 
-    res = await parent.zdo.request(zdo_t.ZDOCmd.Mgmt_Leave_req, ieee, 0x02)
+    # Get tries
+    tries = params[p.TRIES]
+
+    res = await u.retry_wrapper(
+        parent.zdo.request,
+        zdo_t.ZDOCmd.Mgmt_Leave_req,
+        ieee,
+        0x02,
+        tries=tries,
+    )
     event_data["result_leave"] = res
     LOGGER.debug("0x%04x: Mgmt_Leave_req: %s", parent.nwk, res)
 
@@ -40,15 +53,20 @@ async def ieee_ping(
         return
 
     # The device is the parent device
-    dev = app.get_device(ieee)
+    dev = await u.get_device(app, listener, ieee)
+
+    # Get tries
+    tries = params[p.TRIES]
 
     LOGGER.debug("running 'ieee_ping' command to 0x%s", dev.nwk)
 
-    res = await dev.zdo.request(
+    res = await u.retry_wrapper(
+        dev.zdo.request,
         zdo_t.ZDOCmd.IEEE_addr_req,
         dev.nwk,  # nwk_addr_of_interest
         0x00,  # request_type (0=single device response)
         0x00,  # Start index
+        tries=tries,
     )
     event_data["result_ping"] = res
     LOGGER.debug("0x%04x: IEEE_addr_req: %s", dev.nwk, res)
@@ -68,6 +86,7 @@ async def zdo_join_with_code(
     #    + b"\xD7\x76\x0D\x5C\xAD\x63\x7F\x69\xCC"
     # )
     code = params[p.CODE]
+    # Note: Router is awake, there is no need for "tries"
     res = await app.permit_with_key(node, code, 60)
     link_key = bt.EmberKeyData(b"ZigBeeAlliance09")
     res = await app._ezsp.addTransientLinkKey(node, link_key)
@@ -113,13 +132,12 @@ async def zdo_scan_now(
 
     LOGGER.debug("Scanning topology")
     task = asyncio.create_task(app.topology.scan())
-    event_data["task"] = task
+    add_task_info(event_data, task)
 
 
 async def zdo_flood_parent_annce(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
-
     LOGGER.debug("flooding network with parent annce")
 
     flooder_task = getattr(app, "flooder_task", None)
@@ -130,14 +148,13 @@ async def zdo_flood_parent_annce(
         event_data["task"] = None
         return
 
-    flooder_task = asyncio.create_task(_flood_with_parent_annce(app))
-    event_data["task"] = flooder_task
+    flooder_task = asyncio.create_task(_flood_with_parent_annce(app, listener))
+    add_task_info(event_data, flooder_task)
     app.flooder_task = flooder_task
 
 
-async def _flood_with_parent_annce(app):
-
-    coord = app.get_device(app.ieee)
+async def _flood_with_parent_annce(app, listener):
+    coord = await u.get_device(app, listener, app.ieee)
 
     while True:
         children = [

@@ -8,13 +8,11 @@ import os
 import re
 import typing
 from enum import Enum
-from typing import Any
 
-import packaging
-import packaging.version
-from homeassistant.const import __version__ as HA_VERSION
-from pkg_resources import parse_version
-from zigpy import __version__ as zigpy_version
+import zigpy
+from homeassistant.components.zha.core.gateway import ZHAGateway
+from homeassistant.util import dt as dt_util
+from pkg_resources import get_distribution, parse_version
 from zigpy import types as t
 from zigpy.exceptions import ControllerException, DeliveryError
 from zigpy.zcl import foundation as f
@@ -24,7 +22,12 @@ from .params import USER_PARAMS as P
 
 LOGGER = logging.getLogger(__name__)
 
-if packaging.version.parse(HA_VERSION) < packaging.version.parse("2023.4"):
+# pylint: disable=too-many-lines
+
+HA_VERSION = get_distribution("homeassistant").version
+ZIGPY_VERSION = get_distribution("zigpy").version
+
+if parse_version(HA_VERSION) < parse_version("2023.4"):
     # pylint: disable=ungrouped-imports
     from homeassistant.util.json import save_json
 else:
@@ -35,6 +38,16 @@ if typing.TYPE_CHECKING:
     VERSION_TIME: float = 0.0
     VERSION: str = "Unknown"
     MANIFEST: dict[str, str | list[str]] = {}
+
+
+def getHaVersion() -> str:
+    """Get HA Version"""
+    return HA_VERSION
+
+
+def getZigpyVersion() -> str:
+    """Get zigpy Version"""
+    return ZIGPY_VERSION
 
 
 def getVersion() -> str:
@@ -202,18 +215,14 @@ def get_radio_version(app):
         if hasattr(zigpy_znp, "__version__"):
             return zigpy_znp.__version__
 
-        import pkg_resources
-
-        return pkg_resources.get_distribution("zigpy_znp").version
+        return get_distribution("zigpy_znp").version
     if hasattr(app, "_ezsp"):
         import bellows
 
         if hasattr(bellows, "__version__"):
             return bellows.__version__
 
-        import pkg_resources
-
-        return pkg_resources.get_distribution("bellows").version
+        return get_distribution("bellows").version
     if hasattr(app, "_api"):
         rt = get_radiotype(app)
         if rt == RadioType.DECONZ:
@@ -222,27 +231,21 @@ def get_radio_version(app):
             if hasattr(zigpy_deconz, "__version__"):
                 return zigpy_deconz.__version__
 
-            import pkg_resources
-
-            return pkg_resources.get_distribution("zigpy_deconz").version
+            return get_distribution("zigpy_deconz").version
         if rt == RadioType.ZIGATE:
             import zigpy_zigate
 
             if hasattr(zigpy_zigate, "__version__"):
                 return zigpy_zigate.__version__
 
-            import pkg_resources
-
-            return pkg_resources.get_distribution("zigpy_zigate").version
+            return get_distribution("zigpy_zigate").version
         if rt == RadioType.XBEE:
             import zigpy_xbee
 
             if hasattr(zigpy_xbee, "__version__"):
                 return zigpy_xbee.__version__
 
-            import pkg_resources
-
-            return pkg_resources.get_distribution("zigpy_xbee").version
+            return get_distribution("zigpy_xbee").version
 
         # if rt == RadioType.ZIGPY_CC:
         #     import zigpy_cc
@@ -256,7 +259,7 @@ def get_radio_version(app):
 #  Reference can be entity, device, or IEEE address
 async def get_ieee(app, listener, ref):
     # pylint: disable=too-many-return-statements
-    # LOGGER.debug("Type IEEE: %s", type(ref))
+    # LOGGER.error("######### Get IEEE: %s %r", type(ref), ref)
     if isinstance(ref, str):
         # Check if valid ref address
         if ref.count(":") == 7:
@@ -276,48 +279,61 @@ async def get_ieee(app, listener, ref):
         # Todo: check if NWK address
         entity_registry = (
             # Deprecated >= 2022.6.0
-            await listener._hass.helpers.entity_registry.async_get_registry()
-            if packaging.version.parse(HA_VERSION)
-            < packaging.version.parse("2022.6")
-            else listener._hass.helpers.entity_registry.async_get(
-                listener._hass
+            await get_hass(
+                listener
+            ).helpers.entity_registry.async_get_registry()
+            if not is_ha_ge("2022.6")
+            else get_hass(listener).helpers.entity_registry.async_get(
+                get_hass(listener)
             )
         )
-        # LOGGER.debug("registry %s",entity_registry)
-        registry_entity = entity_registry.async_get(ref)
-        LOGGER.debug("registry_entity %s", registry_entity)
-        if registry_entity is None:
-            return None
-        if registry_entity.platform != "zha":
-            LOGGER.error("Not a ZHA device : '%s'", ref)
-            return None
 
         device_registry = (
             # Deprecated >= 2022.6.0
-            await listener._hass.helpers.device_registry.async_get_registry()
-            if packaging.version.parse(HA_VERSION)
-            < packaging.version.parse("2022.6")
-            else listener._hass.helpers.device_registry.async_get(
-                listener._hass
+            await get_hass(
+                listener
+            ).helpers.device_registry.async_get_registry()
+            if not is_ha_ge("2022.6")
+            else get_hass(listener).helpers.device_registry.async_get(
+                get_hass(listener)
             )
         )
-        registry_device = device_registry.async_get(registry_entity.device_id)
-        LOGGER.debug("registry_device %s", registry_device)
+        registry_device = device_registry.async_get(ref)
+
+        if registry_device is None:
+            # LOGGER.debug("registry %s",entity_registry)
+            registry_entity = entity_registry.async_get(ref)
+            if registry_entity is None:
+                LOGGER.error("No device found for '%s'", ref)
+                return None
+            if registry_entity.platform != "zha":
+                LOGGER.error("Not a ZHA device : '%s'", ref)
+                return None
+
+            LOGGER.debug("Found registry_entity %r", registry_entity)
+            registry_device = device_registry.async_get(
+                registry_entity.device_id
+            )
+
+        LOGGER.debug("Found registry_device %r", registry_device)
         for identifier in registry_device.identifiers:
             if identifier[0] == "zha":
                 return t.EUI64.convert(identifier[1])
+
+        LOGGER.error("Not a ZHA device : '%s'", ref)
         return None
 
     # Other type, suppose it's already an EUI64
     return ref
 
 
-# Get a zigbee device instance for the reference.
-#  Reference can be entity, device, or IEEE address
 async def get_device(app, listener, reference):
-    # Method is called get
+    """
+    Get a zigbee device instance for the reference.
+    Reference can be entity, device, or IEEE address
+    """
     ieee = await get_ieee(app, listener, reference)
-    LOGGER.debug("IEEE for get_device: %s", ieee)
+    LOGGER.debug("IEEE for get_device: %s %s", reference, ieee)
     return app.get_device(ieee)
 
 
@@ -406,8 +422,20 @@ def get_cluster_from_params(
 
     cluster_id = params[p.CLUSTER_ID]
     if not isinstance(cluster_id, int):
-        msg = f"Cluster must be numeric {cluster_id}"
-        raise Exception(msg)
+        attr_id = params[p.ATTR_ID]
+        if isinstance(attr_id, str):
+            for _epid, ep in dev.endpoints.items():
+                if _epid == 0:
+                    continue
+                for _cid, cluster in ep.in_clusters.items():
+                    if attr_id in cluster.attributes_by_name:
+                        cluster_id = _cid
+                        LOGGER.debug("Found Cluster:0x%04X", cluster_id)
+                        break
+
+        if not isinstance(cluster_id, int):
+            msg = f"Cluster must be numeric {cluster_id}"
+            raise Exception(msg)
 
     # Get best endpoint
     if params[p.EP_ID] is None or params[p.EP_ID] == "":
@@ -443,13 +471,37 @@ def get_cluster_from_params(
     return cluster
 
 
+def dict_to_jsonable(src_dict):
+    result = {}
+    if isJsonable(src_dict):
+        return src_dict
+    for key, value in src_dict.items():
+        if not isJsonable(value):
+            LOGGER.debug(
+                "Can't convert %r to JSON, serializing if possible.", value
+            )
+            if callable(getattr(value, "serialize", None)):
+                # Serialization results in "bytes"
+                value = value.serialize()
+            if isinstance(value, bytes):
+                # "bytes" is not compatible with json, get a "string"
+                value = str(value, encoding="ascii")
+            else:
+                # Anything else: get a textual representation
+                value = repr(value)
+
+        result[key] = value
+
+    return result
+
+
 def write_json_to_file(
     data, subdir, fname, desc, listener=None, normalize_name=False
 ):
     if listener is None or subdir == "local":
         base_dir = os.path.dirname(__file__)
     else:
-        base_dir = listener._hass.config.config_dir
+        base_dir = get_hass(listener).config.config_dir
 
     out_dir = os.path.join(base_dir, subdir)
     if not os.path.isdir(out_dir):
@@ -464,6 +516,11 @@ def write_json_to_file(
     LOGGER.debug(f"Finished writing {desc} in '{file_name}'")
 
 
+def helper_save_json(file_name: str, data: typing.Any):
+    """Helper because the actual method depends on the HA version"""
+    save_json(file_name, data)
+
+
 def append_to_csvfile(
     fields,
     subdir,
@@ -476,7 +533,7 @@ def append_to_csvfile(
     if listener is None or subdir == "local":
         base_dir = os.path.dirname(__file__)
     else:
-        base_dir = listener._hass.config.config_dir
+        base_dir = get_hass(listener).config.config_dir
 
     out_dir = os.path.join(base_dir, subdir)
     if not os.path.isdir(out_dir):
@@ -499,11 +556,64 @@ def append_to_csvfile(
         LOGGER.debug(f"Appended {desc} to '{file_name}'")
 
 
+def record_read_data(
+    read_resp, cluster: zigpy.zcl.Cluster, params, listener=None
+):
+    """Record result from attr_write to CSV file if configured"""
+    if params[p.CSV_FILE] is None:
+        return
+
+    date_str = dt_util.utcnow().isoformat()
+
+    for attr_id, read_val in read_resp[0].items():
+        fields = []
+        if params[p.CSV_LABEL] is not None:
+            attr_name = params[p.CSV_LABEL]
+        else:
+            python_type = type(read_resp[0][attr_id])
+            attr_type = f.DATA_TYPES.pytype_to_datatype_id(python_type)
+
+            try:
+                attr_def = cluster.attributes.get(
+                    attr_id, (str(attr_id), None)
+                )
+                if is_zigpy_ge("0.50.0") and isinstance(
+                    attr_def, f.ZCLAttributeDef
+                ):
+                    attr_name = attr_def.name
+                else:
+                    attr_name = attr_def[0]
+            except Exception:
+                attr_name = attr_id
+
+        fields.append(date_str)
+        fields.append(cluster.name)
+        fields.append(attr_name)
+        fields.append(read_val)
+        fields.append(f"0x{attr_id:04X}")
+        fields.append(f"0x{cluster.cluster_id:04X}")
+        fields.append(cluster.endpoint.endpoint_id)
+        fields.append(str(cluster.endpoint.device.ieee))
+        fields.append(
+            f"0x{params[p.MANF]:04X}" if params[p.MANF] is not None else ""
+        )
+        fields.append(f"0x{attr_type:02X}" if attr_type is not None else "")
+
+        append_to_csvfile(
+            fields,
+            "csv",
+            params[p.CSV_FILE],
+            f"{attr_name}={read_val}",
+            listener=listener,
+        )
+
+
 def get_attr_id(cluster, attribute):
     # Try to get attribute id from cluster
     try:
-        if isinstance(attribute, str):
-            return cluster.attributes_by_name(attribute)
+        if attribute in cluster.attributes_by_name:
+            # return cluster.attributes_by_name(attribute)
+            return cluster.attributes_by_name[attribute].id
     except Exception:
         return None
 
@@ -597,16 +707,53 @@ def attr_encode(attr_val_in, attr_type):  # noqa C901
             )
 
         attr_obj = f.TypeValue(attr_type, t.LVBytes(attr_val_in))
+    elif attr_type == 0x48:  # Array, (+Bag?, Set?)
+        # TODO: apply to Bag and Set ?
+        #
+        # Array List of bytes currently is:
+        #  First byte: type of array items
+        #  Next bytes: bytes for array items
+        #
+        # Maybe in future accept:
+        #  Specifying array item type in 'attr_items_type:'
+        #      (/detect items type from read).
+
+        if isinstance(attr_val_in, str):
+            attr_val_in = str.encode(attr_val_in[1:])
+
+        # Determine value to compare read values
+        #       with the value (to be) written [see attr_write].
+        compare_val = t.List[t.uint8_t](attr_val_in)
+
+        # Get type of array items
+        array_item_type = attr_val_in[0]
+
+        # Get body / array items.
+        array_body = t.SerializableBytes(bytes(attr_val_in[1:]))
+
+        # Construct value to write as specific zigpy object
+        attr_obj = f.TypeValue(attr_type, f.Array(array_item_type, array_body))
     elif attr_type == 0xFF or attr_type is None:
         compare_val = str2int(attr_val_in)
         # This should not happen ideally
         attr_obj = f.TypeValue(attr_type, t.LVBytes(compare_val))
     else:
         # Try to apply conversion using foundation DATA_TYPES table
+        # Note: this is not perfect and specific conversions may be needed.
         data_type = f.DATA_TYPES[attr_type][1]
         LOGGER.debug(f"Data type '{data_type}' for attr type {attr_type}")
-        compare_val = data_type(str2int(attr_val_in))
-        attr_obj = f.TypeValue(attr_type, data_type(compare_val))
+        if isinstance(attr_val_in, list):
+            # Without length byte after serialisation:
+            compare_val = t.List[t.uint8_t](attr_val_in)
+            # With length byte after serialisation:
+            # compare_val = t.LVBytes(attr_val_in)
+
+            attr_obj = f.TypeValue(attr_type, data_type(compare_val))
+            # Not using : attr_obj = data_type(attr_type, compare_val)
+        #             which may add extra bytes
+        else:
+            compare_val = data_type(str2int(attr_val_in))
+            attr_obj = f.TypeValue(attr_type, compare_val)
         LOGGER.debug(
             "Converted %s to %s - will compare to %s - Type: 0x%02X",
             attr_val_in,
@@ -812,7 +959,7 @@ def extractParams(  # noqa: C901
         )
 
     if P.USE_CACHE in rawParams:
-        params[p.USE_CACHE] = str2bool(rawParams[P.USE_CACHE])
+        params[p.USE_CACHE] = str2int(rawParams[P.USE_CACHE])
 
     if P.EVENT_DONE in rawParams:
         params[p.EVT_DONE] = rawParams[P.EVENT_DONE]
@@ -842,7 +989,8 @@ def extractParams(  # noqa: C901
 #
 async def retry(
     func: typing.Callable[[], typing.Awaitable[typing.Any]],
-    retry_exceptions: typing.Iterable[Any],  # typing.Iterable[BaseException],
+    retry_exceptions: typing.Iterable[typing.Any]
+    | None = None,  # typing.Iterable[BaseException],
     tries: int = 3,
     delay: int | float = 0.1,
 ) -> typing.Any:
@@ -850,10 +998,20 @@ async def retry(
 
     Only exceptions in `retry_exceptions` will be retried.
     """
+    if retry_exceptions is None:
+        # Default list
+        retry_exceptions = (
+            DeliveryError,
+            ControllerException,
+            asyncio.CancelledError,
+            asyncio.TimeoutError,
+        )
+
     while True:
         LOGGER.debug("Tries remaining: %s", tries)
         try:
             return await func()
+            # pylint: disable-next=catching-non-exception
         except retry_exceptions:  # type:ignore[misc]
             if tries <= 1:
                 raise
@@ -861,8 +1019,27 @@ async def retry(
             await asyncio.sleep(delay)
 
 
+async def retry_wrapper(
+    func: typing.Callable,
+    *args,
+    retry_exceptions: typing.Iterable[typing.Any]
+    | None = None,  # typing.Iterable[BaseException],
+    tries: int = 3,
+    delay: int | float = 0.1,
+    **kwargs,
+) -> typing.Any:
+    """Inline callable wrapper for retry"""
+    return await retry(
+        functools.partial(func, *args, **kwargs),
+        retry_exceptions,
+        tries=tries,
+        delay=delay,
+    )
+
+
 def retryable(
-    retry_exceptions: typing.Iterable[Any],  # typing.Iterable[BaseException]
+    retry_exceptions: None
+    | typing.Iterable[typing.Any] = None,  # typing.Iterable[BaseException]
     tries: int = 1,
     delay: float = 0.1,
 ) -> typing.Callable:
@@ -892,6 +1069,7 @@ def retryable(
 
 
 # zigpy wrappers
+
 
 # The zigpy library does not offer retryable on read_attributes.
 # Add it ourselves
@@ -932,4 +1110,17 @@ def get_local_dir() -> str:
 def is_zigpy_ge(version: str) -> bool:
     """Test if zigpy library is newer than version"""
     # Example version value: "0.45.0"
-    return parse_version(zigpy_version) >= parse_version(version)
+    return parse_version(getZigpyVersion()) >= parse_version(version)
+
+
+def is_ha_ge(version: str) -> bool:
+    """Test if zigpy library is newer than version"""
+    return parse_version(getHaVersion()) >= parse_version(version)
+
+
+def get_hass(gateway: ZHAGateway):
+    """HA Version independent way of getting hass from gateway"""
+    hass = getattr(gateway, "_hass", None)
+    if hass is None:
+        hass = getattr(gateway, "hass", None)
+    return hass

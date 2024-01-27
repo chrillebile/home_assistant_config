@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from homeassistant.components.camera import Camera, CameraEntityFeature
+from homeassistant.components.vacuum import ATTR_BATTERY_ICON
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -13,7 +14,7 @@ from homeassistant.util import slugify
 from roborock import RoborockStateCode
 from roborock.exceptions import RoborockException
 
-from . import DomainData
+from . import EntryData
 from .common.image_handler import ImageHandlerRoborock
 from .common.map_data import MapData
 from .common.map_data_parser import MapDataParserRoborock
@@ -68,12 +69,13 @@ async def async_setup_entry(
         image_config[CONF_INCLUDE_IGNORED_OBSTACLES] = data.get(
             CONF_INCLUDE_IGNORED_OBSTACLES
         )
-    domain_data: DomainData = hass.data[DOMAIN][
+    domain_data: EntryData = hass.data[DOMAIN][
         config_entry.entry_id
     ]
 
     entities: list[VacuumCameraMap] = []
-    for coordinator in domain_data.get("coordinators"):
+    for device_id, device_entry_data in domain_data.get("devices").items():
+        coordinator = device_entry_data["coordinator"]
         device_info = coordinator.data
         unique_id = slugify(device_info.device.duid)
         entities.append(VacuumCameraMap(unique_id, image_config, device_info, coordinator))
@@ -84,7 +86,37 @@ class VacuumCameraMap(RoborockEntity, Camera):
     """Representation of a Roborock camera map."""
 
     _is_map_valid_by_device = {}
-
+    _unrecorded_attributes = frozenset(
+        {        
+            ATTRIBUTE_CALIBRATION,
+            ATTRIBUTE_CARPET_MAP,
+            ATTRIBUTE_CHARGER,
+            ATTRIBUTE_CLEANED_ROOMS,
+            ATTRIBUTE_GOTO,
+            ATTRIBUTE_GOTO_PATH,
+            ATTRIBUTE_GOTO_PREDICTED_PATH,
+            ATTRIBUTE_IGNORED_OBSTACLES,
+            ATTRIBUTE_IGNORED_OBSTACLES_WITH_PHOTO,
+            ATTRIBUTE_IMAGE,
+            ATTRIBUTE_IS_EMPTY,
+            ATTRIBUTE_MAP_NAME,
+            ATTRIBUTE_MOP_PATH,
+            ATTRIBUTE_NO_CARPET_AREAS,
+            ATTRIBUTE_NO_GO_AREAS,
+            ATTRIBUTE_NO_MOPPING_AREAS,
+            ATTRIBUTE_OBSTACLES,
+            ATTRIBUTE_OBSTACLES_WITH_PHOTO,
+            ATTRIBUTE_PATH,
+            ATTRIBUTE_ROOM_NUMBERS,
+            ATTRIBUTE_ROOMS,
+            ATTRIBUTE_VACUUM_POSITION,
+            ATTRIBUTE_VACUUM_ROOM,
+            ATTRIBUTE_VACUUM_ROOM_NAME,
+            ATTRIBUTE_WALLS,
+            ATTRIBUTE_ZONES,
+            ATTR_BATTERY_ICON,
+        }
+    )
     def __init__(
             self,
             unique_id: str,

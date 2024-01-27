@@ -1,0 +1,156 @@
+blueprint:
+  name: Scheduled Timeslot
+  description: "Timeslot Scheduler (e.g for vacuums) that allows to define a action
+    to be executed within the specified timeslot and its condition. \n"
+  domain: automation
+  input:
+    monday_enabled:
+      name: Monday
+      default: false
+      selector:
+        boolean: {}
+    tuesday_enabled:
+      name: Tuesday
+      default: false
+      selector:
+        boolean: {}
+    wednesday_enabled:
+      name: Wednesday
+      default: false
+      selector:
+        boolean: {}
+    thursday_enabled:
+      name: Thursday
+      default: false
+      selector:
+        boolean: {}
+    friday_enabled:
+      name: Friday
+      default: false
+      selector:
+        boolean: {}
+    saturday_enabled:
+      name: Saturday
+      default: false
+      selector:
+        boolean: {}
+    sunday_enabled:
+      name: Sunday
+      default: false
+      selector:
+        boolean: {}
+    time_from:
+      name: Timeslot from
+      default: '15:00:00'
+      selector:
+        time: {}
+    time_to:
+      name: Timeslot to
+      default: '17:00:00'
+      selector:
+        time: {}
+    last_triggered:
+      name: Last Triggered at
+      description: 'Select a `input_datetime` helper that stores the information when
+        this automation was triggerd the last time '
+      selector:
+        entity:
+          domain:
+          - input_datetime
+          multiple: false
+    condition_sensor_01:
+      name: 1. Condition Sensor (Optional)
+      description: Sensor to prevent the scheduled action
+      default:
+      selector:
+        entity: {}
+    condition_state_01:
+      name: 1. Condition state (Optional)
+      description: state the given `condition_sensor` must have to run the scheduled
+        action
+      default: 'on'
+    condition_sensor_02:
+      name: 2. Condition Sensor (Optional)
+      description: Sensor to prevent the scheduled action
+      default:
+      selector:
+        entity: {}
+    condition_state_02:
+      name: 2. Condition state (Optional)
+      description: state the given `condition_sensor` must have to run the scheduled
+        action
+      default: 'on'
+    condition_sensor_03:
+      name: 3. Condition Sensor (Optional)
+      description: Sensor to prevent the scheduled action
+      default:
+      selector:
+        entity: {}
+    condition_state_03:
+      name: 3. Condition state (Optional)
+      description: state the given `condition_sensor` must have to run the scheduled
+        action
+      default: 'on'
+    scheduled_action:
+      name: Action
+      description: Scheduled action to run
+      selector:
+        action: {}
+  source_url: https://gist.github.com/pavax/680ba1f2d34b0697bf0bbb5a73ed68d3
+mode: single
+max_exceeded: silent
+variables:
+  monday_enabled: !input monday_enabled
+  tuesday_enabled: !input tuesday_enabled
+  wednesday_enabled: !input wednesday_enabled
+  thursday_enabled: !input thursday_enabled
+  friday_enabled: !input friday_enabled
+  saturday_enabled: !input saturday_enabled
+  sunday_enabled: !input sunday_enabled
+  time_from: !input time_from
+  time_to: !input time_to
+  last_triggered: !input last_triggered
+  condition_sensor_01: !input condition_sensor_01
+  condition_state_01: !input condition_state_01
+  condition_sensor_02: !input condition_sensor_02
+  condition_state_02: !input condition_state_02
+  condition_sensor_03: !input condition_sensor_03
+  condition_state_03: !input condition_state_03
+trigger:
+- platform: time_pattern
+  minutes: '*'
+condition:
+- condition: template
+  value_template: "{% set current_day = now().weekday() | int %} {{ \n  (current_day
+    == 0 and monday_enabled) or \n  (current_day == 1 and tuesday_enabled) or \n  (current_day
+    == 2 and wednesday_enabled) or\n  (current_day == 3 and thursday_enabled) or \n
+    \ (current_day == 4 and friday_enabled) or\n  (current_day == 5 and saturday_enabled)
+    or\n  (current_day == 6 and sunday_enabled)\n}}\n"
+- condition: time
+  after: !input time_from
+  before: !input time_to
+- condition: template
+  value_template: '{% set current_date = now().strftime("%Y-%m-%d") %} {% set timeslot_begin
+    = strptime(current_date + " " + time_from, "%Y-%m-%d %H:%M:%S") %} {% set timeslot_end
+    = strptime(current_date + " " + time_to, "%Y-%m-%d %H:%M:%S") %} {% set last_triggered_at
+    = strptime(states(last_triggered), "%Y-%m-%d %H:%M:%S") %} {% set already_triggered
+    =  timeslot_begin <= last_triggered_at < timeslot_end %} {{ not already_triggered
+    }}
+
+    '
+- condition: template
+  value_template: '{{ condition_sensor_01 == None or is_state(condition_sensor_01,condition_state_01)
+    }}'
+- condition: template
+  value_template: '{{ condition_sensor_02 == None or is_state(condition_sensor_02,condition_state_02)
+    }}'
+- condition: template
+  value_template: '{{ condition_sensor_03 == None or is_state(condition_sensor_03,condition_state_03)
+    }}'
+action:
+- choose: []
+  default: !input scheduled_action
+- service: input_datetime.set_datetime
+  data:
+    entity_id: !input last_triggered
+    timestamp: '{{ now().timestamp() }}'

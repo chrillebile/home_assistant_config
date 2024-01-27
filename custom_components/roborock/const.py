@@ -1,6 +1,7 @@
 """Constants for Roborock."""
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.calendar import DOMAIN as CALENDAR_DOMAIN
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
@@ -22,6 +23,7 @@ CONF_HOME_DATA = "home_data"
 
 BINARY_SENSOR = BINARY_SENSOR_DOMAIN
 BUTTON = BUTTON_DOMAIN
+CALENDAR = CALENDAR_DOMAIN
 CAMERA = CAMERA_DOMAIN
 NUMBER = NUMBER_DOMAIN
 SELECT = SELECT_DOMAIN
@@ -49,11 +51,13 @@ ROCKROBO_Q5 = "roborock.vacuum.a34"
 ROCKROBO_Q7_MAX = "roborock.vacuum.a38"
 ROCKROBO_G10S = "roborock.vacuum.a46"
 ROCKROBO_G10 = "roborock.vacuum.a29"
+ROCKROBO_G10_SG = "roborock.vacuum.a30" # Variant of the G10, has similar features as S7
 ROCKROBO_S7 = "roborock.vacuum.a15"
 ROCKROBO_S6_MAXV = "roborock.vacuum.a10"
 ROCKROBO_E2 = "roborock.vacuum.e2"
 ROCKROBO_1S = "roborock.vacuum.m1s"
 ROCKROBO_C1 = "roborock.vacuum.c1"
+ROCKROBO_P10 = "roborock.vacuum.a75"
 ROCKROBO_WILD = "roborock.vacuum.*"  # wildcard
 
 MODELS_VACUUM_WITH_MOP = [
@@ -65,10 +69,13 @@ MODELS_VACUUM_WITH_MOP = [
     ROCKROBO_S6_PURE,
     ROCKROBO_S7,
     ROCKROBO_S7_MAXV,
+    ROCKROBO_P10,
+    ROCKROBO_G10_SG,
 ]
 MODELS_VACUUM_WITH_SEPARATE_MOP = [
     ROCKROBO_S7,
     ROCKROBO_S7_MAXV,
+    ROCKROBO_G10_SG,
 ]
 
 MINIMAL_IMAGE_WIDTH = 20

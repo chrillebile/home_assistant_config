@@ -1,1 +1,12 @@
-[]
+- id: '1698927119282'
+  name: Test
+  entities:
+    light.bedlight:
+      supported_color_modes:
+      - brightness
+      color_mode: brightness
+      brightness: 188.7
+      friendly_name: Bedlight
+      supported_features: 0
+      state: 'on'
+  metadata: {}

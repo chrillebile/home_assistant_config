@@ -180,13 +180,19 @@
       },
       "dock_status": {
         "name": "Dock status"
+      },
+      "mop_drying_status": {
+        "name": "Mop drying"
+      },
+      "mop_drying_remaining_time": {
+        "name": "Mop drying remaining time"
+      },
+      "clean_percent": {
+        "name": "Cleaning progress"
       }
     },
     "binary_sensor": {
-      "mop_attached_1": {
-        "name": "Mop attached"
-      },
-      "mop_attached_2": {
+      "mop_attached": {
         "name": "Mop attached"
       },
       "water_box_attached": {
@@ -198,8 +204,9 @@
     },
     "select": {
       "mop_mode": {
-        "name": "Mop mode",
+        "name": "Route",
         "state": {
+          "fast": "Fast",
           "standard": "Standard",
           "deep": "Deep",
           "deep_plus": "Deep+",
@@ -210,10 +217,14 @@
         "name": "Mop intensity",
         "state": {
           "off": "Off",
+          "low": "Low",
           "mild": "Mild",
           "moderate": "Moderate",
+          "medium": "Medium",
           "intense": "Intense",
-          "custom": "Custom"
+          "high": "High",
+          "custom": "Custom",
+          "custom_water_flow": "Custom"
         }
       }
     },
@@ -274,10 +285,10 @@
         "name": "DnD end"
       },
       "valley_electricity_start": {
-        "name": "Valley electricity start"
+        "name": "Off-Peak charging start"
       },
       "valley_electricity_end": {
-        "name": "Valley electricity end"
+        "name": "Off-Peak charging end"
       }
     },
     "switch": {
@@ -285,7 +296,7 @@
         "name": "Child lock"
       },
       "flow_led_status": {
-        "name": "Flow led status"
+        "name": "Status Indicator Light"
       },
       "dnd_switch": {
         "name": "DnD switch"

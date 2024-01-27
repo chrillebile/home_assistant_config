@@ -19,7 +19,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.const import __version__ as HA_VERSION  # noqa: N812
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.typing import ConfigType
 
@@ -39,6 +39,7 @@ from .const import (
     CONF_FIXED,
     CONF_FORCE_UPDATE_FREQUENCY,
     CONF_IGNORE_UNAVAILABLE_STATE,
+    CONF_INCLUDE,
     CONF_POWER,
     CONF_POWER_SENSOR_CATEGORY,
     CONF_POWER_SENSOR_FRIENDLY_NAMING,
@@ -46,6 +47,7 @@ from .const import (
     CONF_POWER_SENSOR_PRECISION,
     CONF_POWER_TEMPLATE,
     CONF_SENSOR_TYPE,
+    CONF_SENSORS,
     CONF_UNAVAILABLE_POWER,
     CONF_UTILITY_METER_OFFSET,
     CONF_UTILITY_METER_TARIFFS,
@@ -53,6 +55,7 @@ from .const import (
     DATA_CALCULATOR_FACTORY,
     DATA_CONFIGURED_ENTITIES,
     DATA_DISCOVERED_ENTITIES,
+    DATA_DISCOVERY_MANAGER,
     DATA_DOMAIN_ENTITIES,
     DATA_STANDBY_POWER_SENSORS,
     DATA_USED_UNIQUE_IDS,
@@ -70,15 +73,19 @@ from .const import (
     ENERGY_INTEGRATION_METHODS,
     ENTITY_CATEGORIES,
     MIN_HA_VERSION,
+    SERVICE_CHANGE_GUI_CONFIGURATION,
     PowercalcDiscoveryType,
     SensorType,
     UnitPrefix,
 )
 from .discovery import DiscoveryManager
+from .sensor import SENSOR_CONFIG
 from .sensors.group import (
+    get_entries_having_subgroup,
     remove_group_from_power_sensor_entry,
     remove_power_sensor_from_associated_groups,
 )
+from .service.gui_configuration import SERVICE_SCHEMA, change_gui_configuration
 from .strategy.factory import PowerCalculatorStrategyFactory
 
 PLATFORMS = [Platform.SENSOR]
@@ -159,6 +166,10 @@ CONFIG_SCHEMA = vol.Schema(
                     ),
                     vol.Optional(CONF_IGNORE_UNAVAILABLE_STATE): cv.boolean,
                     vol.Optional(CONF_UNAVAILABLE_POWER): vol.Coerce(float),
+                    vol.Optional(CONF_SENSORS): vol.All(
+                        cv.ensure_list,
+                        [SENSOR_CONFIG],
+                    ),
                 },
             ),
         ),
@@ -200,8 +211,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         CONF_UTILITY_METER_TYPES: DEFAULT_UTILITY_METER_TYPES,
     }
 
+    discovery_manager = DiscoveryManager(hass, config)
     hass.data[DOMAIN] = {
         DATA_CALCULATOR_FACTORY: PowerCalculatorStrategyFactory(hass),
+        DATA_DISCOVERY_MANAGER: DiscoveryManager(hass, config),
         DOMAIN_CONFIG: domain_config,
         DATA_CONFIGURED_ENTITIES: {},
         DATA_DOMAIN_ENTITIES: {},
@@ -210,25 +223,34 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DATA_STANDBY_POWER_SENSORS: {},
     }
 
+    await hass.async_add_executor_job(register_services, hass)
+
     if domain_config.get(CONF_ENABLE_AUTODISCOVERY):
-        discovery_manager = DiscoveryManager(hass, config)
         await discovery_manager.start_discovery()
 
-    domain_groups: list[str] | None = domain_config.get(CONF_CREATE_DOMAIN_GROUPS)
-    if domain_groups:
+    await setup_yaml_sensors(hass, config, domain_config)
 
-        async def _create_domain_groups(event: None) -> None:
-            await create_domain_groups(
-                hass,
-                domain_config,
-                domain_groups,
-            )
+    setup_domain_groups(hass, domain_config)
+    setup_standby_group(hass, domain_config)
 
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED,
-            _create_domain_groups,
-        )
+    return True
 
+
+def register_services(hass: HomeAssistant) -> None:
+    """Register generic services"""
+
+    async def handle_service(call: ServiceCall) -> None:
+        await change_gui_configuration(hass, call)
+
+    hass.services.register(
+        DOMAIN,
+        SERVICE_CHANGE_GUI_CONFIGURATION,
+        handle_service,
+        schema=SERVICE_SCHEMA,
+    )
+
+
+def setup_standby_group(hass: HomeAssistant, domain_config: ConfigType) -> None:
     async def _create_standby_group(event: None) -> None:
         hass.async_create_task(
             async_load_platform(
@@ -245,7 +267,66 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _create_standby_group,
     )
 
-    return True
+
+def setup_domain_groups(hass: HomeAssistant, global_config: ConfigType) -> None:
+    domain_groups: list[str] | None = global_config.get(CONF_CREATE_DOMAIN_GROUPS)
+    if not domain_groups:
+        return
+
+    async def _create_domain_groups(event: None) -> None:
+        """Create group sensors aggregating all power sensors from given domains."""
+        _LOGGER.debug("Setting up domain based group sensors..")
+        for domain in domain_groups:
+            if domain not in hass.data[DOMAIN].get(DATA_DOMAIN_ENTITIES):
+                _LOGGER.error(
+                    "Cannot setup group for domain %s, no entities found",
+                    domain,
+                )
+                continue
+
+            domain_entities = hass.data[DOMAIN].get(DATA_DOMAIN_ENTITIES)[domain]
+
+            hass.async_create_task(
+                async_load_platform(
+                    hass,
+                    SENSOR_DOMAIN,
+                    DOMAIN,
+                    {
+                        DISCOVERY_TYPE: PowercalcDiscoveryType.DOMAIN_GROUP,
+                        CONF_ENTITIES: domain_entities,
+                        CONF_DOMAIN: domain,
+                    },
+                    global_config,
+                ),
+            )
+
+    hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STARTED,
+        _create_domain_groups,
+    )
+
+
+async def setup_yaml_sensors(
+    hass: HomeAssistant,
+    config: ConfigType,
+    domain_config: ConfigType,
+) -> None:
+    sensors: list = domain_config.get(CONF_SENSORS, [])
+    sorted_sensors = sorted(
+        sensors,
+        key=lambda item: 1 if CONF_INCLUDE in item else 0,
+    )
+    for sensor_config in sorted_sensors:
+        sensor_config.update({DISCOVERY_TYPE: PowercalcDiscoveryType.USER_YAML})
+        hass.async_create_task(
+            async_load_platform(
+                hass,
+                Platform.SENSOR,
+                DOMAIN,
+                sensor_config,
+                config,
+            ),
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -259,6 +340,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update a given config entry."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+    # Also reload all "parent" groups referring this group as a subgroup
+    for related_entry in await get_entries_having_subgroup(hass, entry):
+        await hass.config_entries.async_reload(related_entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -311,35 +396,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         hass.config_entries.async_update_entry(config_entry, data=data)
 
     return True
-
-
-async def create_domain_groups(
-    hass: HomeAssistant,
-    global_config: ConfigType,
-    domains: list[str],
-) -> None:
-    """Create group sensors aggregating all power sensors from given domains."""
-    _LOGGER.debug("Setting up domain based group sensors..")
-    for domain in domains:
-        if domain not in hass.data[DOMAIN].get(DATA_DOMAIN_ENTITIES):
-            _LOGGER.error(f"Cannot setup group for domain {domain}, no entities found")
-            continue
-
-        domain_entities = hass.data[DOMAIN].get(DATA_DOMAIN_ENTITIES)[domain]
-
-        hass.async_create_task(
-            async_load_platform(
-                hass,
-                SENSOR_DOMAIN,
-                DOMAIN,
-                {
-                    DISCOVERY_TYPE: PowercalcDiscoveryType.DOMAIN_GROUP,
-                    CONF_ENTITIES: domain_entities,
-                    CONF_DOMAIN: domain,
-                },
-                global_config,
-            ),
-        )
 
 
 def _notify_message(

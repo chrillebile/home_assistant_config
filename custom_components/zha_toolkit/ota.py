@@ -1,13 +1,10 @@
-import asyncio
 import json
 import logging
 import os
 from glob import glob
 
 import aiohttp
-from pkg_resources import parse_version
-from zigpy import __version__ as zigpy_version
-from zigpy.exceptions import ControllerException, DeliveryError
+import zigpy
 
 from . import DEFAULT_OTAU
 from . import utils as u
@@ -19,19 +16,6 @@ KOENKK_LIST_URL = (
 )
 
 SONOFF_LIST_URL = "https://zigbee-ota.sonoff.tech/releases/upgrade.json"
-
-
-@u.retryable(
-    (
-        DeliveryError,
-        ControllerException,
-        asyncio.CancelledError,
-        asyncio.TimeoutError,
-    ),
-    tries=3,
-)
-async def retry_wrapper(cmd, *args, **kwargs):
-    return await cmd(*args, **kwargs)
 
 
 async def download_koenkk_ota(listener, ota_dir):
@@ -172,6 +156,25 @@ async def download_sonoff_ota(listener, ota_dir):
                 LOGGER.warning("Exception getting '%s': %s", url, e)
 
 
+async def download_zigpy_ota(app, listener):
+    LOGGER.debug("Zigpy download procedure starting")
+    for _, (ota, _) in app.ota._listeners.items():
+        if isinstance(ota, zigpy.ota.provider.FileStore):
+            # Skip files provider
+            continue
+        await ota.refresh_firmware_list()
+        for image_key, image in ota._cache.items():
+            url = getattr(image, "url", None)
+            LOGGER.error("Try getting %r, %r, %r", image_key, url, image)
+            try:
+                img = await app.ota.get_ota_image(
+                    image_key.manufacturer_id, image_key.image_type, model=None
+                )
+                LOGGER.info("Got image %r", getattr(img, "header", None))
+            except Exception as e:
+                LOGGER.error("%r while getting %r - %s", e, image_key, url)
+
+
 async def ota_update_images(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
@@ -182,22 +185,26 @@ async def ota_update_images(
 async def ota_notify(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
+    LOGGER.debug("OTA_notify")
     event_data["PAR"] = params
     if params[p.DOWNLOAD]:
-        # Download FW from koenkk's list
         if params[p.PATH]:
             ota_dir = params[p.PATH]
         else:
             ota_dir = DEFAULT_OTAU
 
         LOGGER.debug(
-            "OTA image download requested - default:%s, effective: %s",
-            DEFAULT_OTAU,
+            "OTA image download to '%s' (Default dir is:'%s')",
             ota_dir,
+            DEFAULT_OTAU,
         )
 
+        await download_zigpy_ota(app, listener)
         await download_koenkk_ota(listener, ota_dir)
         await download_sonoff_ota(listener, ota_dir)
+
+    # Get tries
+    tries = params[p.TRIES]
 
     # Update internal image database
     await ota_update_images(
@@ -210,7 +217,7 @@ async def ota_notify(
 
     LOGGER.debug("running 'image_notify' command: %s", service)
 
-    device = app.get_device(ieee=ieee)
+    device = await u.get_device(app, listener, ieee)
 
     cluster = None
     for epid, ep in device.endpoints.items():
@@ -223,21 +230,23 @@ async def ota_notify(
         LOGGER.debug("No OTA cluster found")
         return
     basic = device.endpoints[cluster.endpoint.endpoint_id].basic
-    await basic.bind()
-    ret = await basic.configure_reporting("sw_build_id", 0, 1800, 1)
+    await u.retry_wrapper(basic.bind, tries=tries)
+    ret = await u.retry_wrapper(
+        basic.configure_reporting, "sw_build_id", 0, 1800, 1, tries=tries
+    )
     LOGGER.debug("Configured reporting: %s", ret)
 
     ret = None
-    if parse_version(zigpy_version) < parse_version("0.45.0"):
+    if not u.is_zigpy_ge("0.45.0"):
         ret = await cluster.image_notify(0, 100)
     else:
         cmd_args = [0, 100]
-        ret = await retry_wrapper(
+        ret = await u.retry_wrapper(
             cluster.client_command,
             0,  # cmd_id
             *cmd_args,
             # expect_reply = True,
-            tries=params[p.TRIES],
+            tries=tries,
         )
 
     LOGGER.debug("Sent image notify command to 0x%04x: %s", device.nwk, ret)

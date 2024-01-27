@@ -183,10 +183,7 @@
       }
     },
     "binary_sensor": {
-      "mop_attached_1": {
-        "name": "Моющая тряпка"
-      },
-      "mop_attached_2": {
+      "mop_attached": {
         "name": "Моющая тряпка"
       },
       "water_box_attached": {
@@ -213,7 +210,8 @@
           "mild": "Минимальная",
           "moderate": "Средняя",
           "intense": "Максимальная",
-          "custom": "Настраиваемая"
+          "custom": "Настраиваемая",
+          "custom_water_flow": "Настраиваемая"
         }
       }
     },
@@ -274,10 +272,10 @@
         "name": "Не беспокоить конец"
       },
       "valley_electricity_start": {
-        "name": "Valley electricity start"
+        "name": "Off-Peak charging start"
       },
       "valley_electricity_end": {
-        "name": "Valley electricity end"
+        "name": "Off-Peak charging end"
       }
     },
     "switch": {
@@ -285,7 +283,7 @@
         "name": "Child lock"
       },
       "flow_led_status": {
-        "name": "Flow led status"
+        "name": "Status Indicator Light"
       },
       "dnd_switch": {
         "name": "DnD switch"

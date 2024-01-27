@@ -8,5 +8,5 @@ zha:
   zigpy_config:
     ota:
       ikea_provider: true # Auto update Trådfri devices
-      #ledvance_provider: true # Auto update LEDVANCE devices
+      sonoff_provider: true # Auto update SONOFF devices
       otau_directory: /config/zigpy_ota/ota # Utilize .ota files to update everything else

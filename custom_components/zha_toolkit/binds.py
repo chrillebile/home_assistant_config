@@ -24,13 +24,15 @@ BINDABLE_IN_CLUSTERS = [
 async def bind_group(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
-
     LOGGER.debug("running 'bind group' command: %s", service)
     if ieee is None:
         LOGGER.error("missing ieee")
         return
 
-    src_dev = app.get_device(ieee=ieee)
+    src_dev = await u.get_device(app, listener, ieee)
+
+    # Get tries
+    tries = params[p.TRIES]
 
     if not data:
         LOGGER.error("missing cmd_data")
@@ -82,8 +84,14 @@ async def bind_group(
         )
         bind_result = {"endpoint_id": src_epid, "cluster_id": src_out_cluster}
 
-        res = await zdo.request(
-            ZDOCmd.Bind_req, src_dev.ieee, src_epid, src_out_cluster, dst_addr
+        res = await u.retry_wrapper(
+            zdo.request,
+            ZDOCmd.Bind_req,
+            src_dev.ieee,
+            src_epid,
+            src_out_cluster,
+            dst_addr,
+            tries=tries,
         )
         bind_result["result"] = res
         results[src_epid].append(bind_result)
@@ -130,8 +138,14 @@ async def bind_group(
         )
         bind_result = {"endpoint_id": src_epid, "cluster_id": src_in_cluster}
 
-        res = await zdo.request(
-            ZDOCmd.Bind_req, src_dev.ieee, src_epid, src_in_cluster, dst_addr
+        res = await u.retry_wrapper(
+            zdo.request,
+            ZDOCmd.Bind_req,
+            src_dev.ieee,
+            src_epid,
+            src_in_cluster,
+            dst_addr,
+            tries=tries,
         )
         bind_result["result"] = res
         results[src_epid].append(bind_result)
@@ -157,9 +171,12 @@ async def unbind_group(
         LOGGER.error("missing data (destination ieee)")
         return
 
-    src_dev = app.get_device(ieee=ieee)
+    src_dev = await u.get_device(app, listener, ieee)
 
     group_id = u.str2int(data)
+
+    # Get tries
+    tries = params[p.TRIES]
 
     zdo = src_dev.zdo
     src_out_cls = BINDABLE_OUT_CLUSTERS
@@ -196,8 +213,14 @@ async def unbind_group(
         )
 
         unbind_result = {"endpoint_id": src_ep, "cluster_id": src_out_cluster}
-        res = await zdo.request(
-            ZDOCmd.Unbind_req, src_dev.ieee, src_ep, src_out_cluster, dst_addr
+        res = await u.retry_wrapper(
+            zdo.request,
+            ZDOCmd.Unbind_req,
+            src_dev.ieee,
+            src_ep,
+            src_out_cluster,
+            dst_addr,
+            tries=tries,
         )
         unbind_result["result"] = res
         results[src_ep].append(unbind_result)
@@ -214,12 +237,15 @@ async def bind_ieee(
     if ieee is None:
         raise ValueError("'ieee' required")
 
-    src_dev = app.get_device(ieee=ieee)
+    src_dev = await u.get_device(app, listener, ieee)
     if data in [0, False, "0", None]:
         # when command_data is set to 0 or false, bind to coordinator
         data = app.ieee
 
     dst_dev = await u.get_device(app, listener, data)
+
+    # Get tries
+    tries = params[p.TRIES]
 
     # Coordinator has nwk address 0
     isCoordinatorTarget = dst_dev.nwk == 0x0000
@@ -290,12 +316,14 @@ async def bind_ieee(
                 str(dst_dev.ieee),
                 dst_epid,
             )
-            res = await zdo.request(
+            res = await u.retry_wrapper(
+                zdo.request,
                 ZDOCmd.Bind_req,
                 src_dev.ieee,
                 src_ep,
                 src_out_cluster,
                 dst_addr,
+                tries=tries,
             )
             LOGGER.debug(
                 "0x%04x: binding ieee %s: %s",
@@ -360,8 +388,14 @@ async def bind_ieee(
                 "dst_endpoint_id": dst_epid,
                 "cluster_id": src_in_cluster,
             }
-            res = await zdo.request(
-                ZDOCmd.Bind_req, src_dev.ieee, src_ep, src_in_cluster, dst_addr
+            res = await u.retry_wrapper(
+                zdo.request,
+                ZDOCmd.Bind_req,
+                src_dev.ieee,
+                src_ep,
+                src_in_cluster,
+                dst_addr,
+                tries=tries,
             )
             bind_result["result"] = res
             results[src_ep] = bind_result
@@ -394,7 +428,7 @@ async def binds_remove_all(
     if ieee is None:
         LOGGER.error("missing ieee")
         return
-    src_dev = app.get_device(ieee=ieee)
+    src_dev = await u.get_device(app, listener, ieee)
     zdo = src_dev.zdo
 
     # Get target ieee filter
@@ -411,6 +445,17 @@ async def binds_remove_all(
             # If this fails, then we do not catch the exception
             # as the field is not ok.
             tgt_ieee = (await u.get_device(app, listener, data)).ieee
+
+    # Determine endpoints to unbind
+    endpoints = []
+
+    u_endpoint_id = params[p.EP_ID]
+    if u_endpoint_id is not None and u_endpoint_id != "":
+        if not isinstance(u_endpoint_id, list):
+            u_endpoint_id = [u_endpoint_id]
+
+        # unbind user provided endpoints instead
+        endpoints = u_endpoint_id
 
     # Determine clusters to unbind
     clusters = []
@@ -443,6 +488,7 @@ async def binds_remove_all(
             if addr_mode == 1:
                 # group
                 src_ieee = t.EUI64.convert(binding["src"])
+                ep_id = u.str2int(binding["src_ep"])
                 cluster_id = u.str2int(binding["cluster_id"])
 
                 dst_addr = MultiAddress()
@@ -453,13 +499,18 @@ async def binds_remove_all(
                     dst_ieee = t.EUI64.convert(binding["dst"]["dst_ieee"])
                     dst_addr.ieee = dst_ieee
 
-                if (tgt_ieee is None or dst_ieee == tgt_ieee) and (
-                    len(clusters) == 0 or cluster_id in clusters
-                ):
-                    res = await zdo.request(
+                match_filter = (
+                    (tgt_ieee is None or dst_ieee == tgt_ieee)
+                    and (len(endpoints) == 0 or ep_id in endpoints)
+                    and (len(clusters) == 0 or cluster_id in clusters)
+                )
+
+                if match_filter:
+                    res = await u.retry_wrapper(
+                        zdo.request,
                         ZDOCmd.Unbind_req,
                         src_ieee,
-                        binding["src_ep"],
+                        ep_id,
                         cluster_id,
                         dst_addr,
                         tries=params[p.TRIES],
@@ -475,17 +526,24 @@ async def binds_remove_all(
                 dst_addr.addrmode = addr_mode
                 dst_addr.ieee = dst_ieee
                 dst_addr.endpoint = t.uint8_t(binding["dst"]["dst_ep"])
+                ep_id = u.str2int(binding["src_ep"])
                 cluster_id = u.str2int(binding["cluster_id"])
                 # LOGGER.debug(
                 #     f"filter {tgt_ieee} {dst_ieee} {clusters} {cluster_id}"
                 # )
-                if (tgt_ieee is None or dst_ieee == tgt_ieee) and (
-                    len(clusters) == 0 or cluster_id in clusters
-                ):
-                    res = await zdo.request(
+
+                match_filter = (
+                    (tgt_ieee is None or dst_ieee == tgt_ieee)
+                    and (len(endpoints) == 0 or ep_id in endpoints)
+                    and (len(clusters) == 0 or cluster_id in clusters)
+                )
+
+                if match_filter:
+                    res = await u.retry_wrapper(
+                        zdo.request,
                         ZDOCmd.Unbind_req,
                         src_ieee,
-                        binding["src_ep"],
+                        ep_id,
                         cluster_id,
                         dst_addr,
                         tries=params[p.TRIES],
@@ -523,8 +581,11 @@ async def binds_get(
     if ieee is None:
         LOGGER.error("missing ieee")
         return
-    src_dev = app.get_device(ieee=ieee)
+    src_dev = await u.get_device(app, listener, ieee)
     zdo = src_dev.zdo
+
+    # Get tries
+    tries = params[p.TRIES]
 
     idx = 0
     done = False
@@ -535,8 +596,8 @@ async def binds_get(
 
     while not done:
         # Todo: continue when reply is incomplete (update start index)
-        reply = await zdo.request(
-            ZDOCmd.Mgmt_Bind_req, idx, tries=params[p.TRIES]
+        reply = await u.retry_wrapper(
+            zdo.request, ZDOCmd.Mgmt_Bind_req, idx, tries=tries
         )
         event_data["replies"].append(reply)
 
@@ -571,7 +632,7 @@ async def binds_get(
                 bindings[next_idx] = bind_info
                 next_idx += 1
 
-            if next_idx + 1 >= total:
+            if next_idx >= total:
                 done = True
                 success = True
             else:

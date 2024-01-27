@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib
 import logging
 
 from homeassistant.helpers.template import Template
@@ -79,7 +78,7 @@ async def my_read_reporting_configuration_multiple(
         record.direction = direction
         # LOGGER.warning(f"Record {record.direction} {record.attrid}")
         cfg.append(record)
-    LOGGER.warning("Read reporting with %s %r", cfg, kwargs)
+    LOGGER.debug("Read reporting with %s %r", cfg, kwargs)
     param = t.List[f.ReadReportingConfigRecord](cfg)
     LOGGER.debug("Resolves to %s", param)
 
@@ -89,9 +88,9 @@ async def my_read_reporting_configuration_multiple(
     )
 
     try:
-        LOGGER.warning("Read reporting with %s result %s", cfg, res)
+        LOGGER.debug("Read reporting with %s result %s", cfg, res)
     except Exception as e:
-        LOGGER.debug("Error when reporting result of Read Report %r", e)
+        LOGGER.warning("Error when reporting result of Read Report %r", e)
 
     # Parse configure reporting result for unsupported attributes
     records = res[0]
@@ -125,7 +124,7 @@ Cluster.my_read_reporting_configuration_multiple = (
 async def conf_report_read(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
-    dev = app.get_device(ieee=ieee)
+    dev = await u.get_device(app, listener, ieee)
     cluster = u.get_cluster_from_params(dev, params, event_data)
 
     if False:  # pylint: disable=using-constant-test
@@ -202,7 +201,9 @@ async def conf_report_read(
                         r_conf["type"] = f"0x{rcfg.datatype:02X}"
                         r_conf["min_interval"] = (rcfg.min_interval,)
                         r_conf["max_interval"] = (rcfg.max_interval,)
-                        # r_conf["reportable_change"] = rcfg.reportable_change,
+                        r_conf["reportable_change"] = (
+                            getattr(rcfg, "reportable_change", None),
+                        )
                     except Exception as e:  # nosec
                         LOGGER.error(
                             "Issue when reading AttributesReportingConfig"
@@ -249,7 +250,7 @@ async def conf_report_read(
 async def conf_report(
     app, listener, ieee, cmd, data, service, params, event_data
 ):
-    dev = app.get_device(ieee=ieee)
+    dev = await u.get_device(app, listener, ieee)
 
     cluster = u.get_cluster_from_params(dev, params, event_data)
 
@@ -317,7 +318,7 @@ async def attr_write(  # noqa: C901
 ):
     success = True
 
-    dev = app.get_device(ieee=ieee)
+    dev = await u.get_device(app, listener, ieee)
     cluster = u.get_cluster_from_params(dev, params, event_data)
 
     # Prepare read and write lists
@@ -346,12 +347,9 @@ async def attr_write(  # noqa: C901
     attr_type = params[p.ATTR_TYPE]
 
     result_read = None
-    if (
-        params[p.READ_BEFORE_WRITE]
-        or (len(attr_write_list) == 0)
-        or (cmd != S.ATTR_WRITE)
-    ):
-        if use_cache:
+    if params[p.READ_BEFORE_WRITE] or (attr_read_list and cmd == S.ATTR_READ):
+        if use_cache > 0:
+            # Try to get value from cache
             if attr_id in cluster._attr_cache:
                 result_read = ({attr_id: cluster._attr_cache[attr_id]}, {})
                 LOGGER.debug(
@@ -363,8 +361,11 @@ async def attr_write(  # noqa: C901
                     f"Attribute 0x{cluster.cluster_id:04X}/0x{attr_id:04X}"
                     " not in cache"
                 )
-                success = False
-        else:
+                # Fail if not falling back
+                success = use_cache == 1
+        if use_cache == 0 or (  # Pure read
+            result_read is None and use_cache == 2
+        ):  # Not in cache, fall back
             LOGGER.debug("Request attr read %s", attr_read_list)
             # pylint: disable=unexpected-keyword-arg
             result_read = await u.cluster_read_attributes(
@@ -424,6 +425,9 @@ async def attr_write(  # noqa: C901
                 attr = f.Attribute(attr_id, value=attr_val)
                 attr_write_list.append(attr)  # Write list
 
+    # Use serialize to compare if the compare_val allows it
+    use_serialize = callable(getattr(compare_val, "serialize", None))
+
     if attr_type is not None:
         event_data["attr_type"] = f"0x{attr_type:02X}"
 
@@ -431,9 +435,20 @@ async def attr_write(  # noqa: C901
     write_is_equal = (
         (params[p.READ_BEFORE_WRITE])
         and (len(attr_write_list) != 0)
+        and compare_val is not None
         and (
             (attr_id in result_read[0])  # type:ignore[index]
-            and (result_read[0][attr_id] == compare_val)  # type:ignore[index]
+            and (
+                result_read[0][  # type:ignore[index]
+                    attr_id
+                ].serialize()  # type:ignore[union-attr]
+                == compare_val.serialize()
+                if use_serialize
+                else result_read[0][  # type:ignore[index]
+                    attr_id
+                ]  # type:ignore[union-attr]
+                == compare_val
+            )
         )
     )
 
@@ -450,7 +465,6 @@ async def attr_write(  # noqa: C901
         )
         and cmd == "attr_write"
     ):
-
         if result_read is not None:
             event_data["read_before"] = result_read
             result_read = None
@@ -489,11 +503,29 @@ async def attr_write(  # noqa: C901
                 f"Reading attr result (attrs, status): {result_read!r}"
             )
             # read_is_equal = (result_read[0][attr_id] == compare_val)
-            success = (
-                success
-                and (len(result_read[1]) == 0 and len(result_read[0]) == 1)
-                and (result_read[0][attr_id] == compare_val)
+            success = success and (
+                len(result_read[1]) == 0 and len(result_read[0]) == 1
             )
+            if success and compare_val is not None:
+                if (
+                    result_read[0][attr_id].serialize()
+                    != compare_val.serialize()
+                    if use_serialize
+                    else result_read[0][attr_id] != compare_val
+                ):
+                    success = False
+                    msg = "Read does not match expected: {!r} <> {!r}".format(
+                        result_read[0][attr_id].serialize()
+                        if use_serialize
+                        else result_read[0][attr_id],
+                        compare_val.serialize()
+                        if use_serialize
+                        else compare_val,
+                    )
+                    LOGGER.warning(msg)
+                    if "warnings" not in event_data:
+                        event_data["warnings"] = []
+                    event_data["warnings"].append(msg)
 
     if result_read is not None:
         event_data["result_read"] = result_read
@@ -529,7 +561,8 @@ async def attr_write(  # noqa: C901
                         )
 
                     template = Template(
-                        "{{ " + state_template_str + " }}", listener._hass
+                        "{{ " + state_template_str + " }}",
+                        u.get_hass(listener),
                     )
                     try:
                         val = template.async_render(value=val, attr_val=val)
@@ -558,7 +591,7 @@ async def attr_write(  # noqa: C901
                         attr_id,
                     )
                 u.set_state(
-                    listener._hass,
+                    u.get_hass(listener),
                     params[p.STATE_ID],
                     val,
                     key=params[p.STATE_ATTR],
@@ -605,11 +638,13 @@ async def attr_write(  # noqa: C901
             listener=listener,
         )
 
-    importlib.reload(u)
-    if "result_read" in event_data and not u.isJsonable(
-        event_data["result_read"]
-    ):
-        event_data["result_read"] = repr(event_data["result_read"])
+    for key in ["read_before", "result_read"]:
+        if key not in event_data:
+            continue
+        event_data[key] = (
+            u.dict_to_jsonable(event_data[key][0]),
+            event_data[key][1],
+        )
 
     # For internal use
     return result_read

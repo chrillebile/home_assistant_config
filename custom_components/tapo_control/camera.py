@@ -7,8 +7,7 @@ from typing import Callable
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.components.camera import (
-    SUPPORT_ON_OFF,
-    SUPPORT_STREAM,
+    CameraEntityFeature,
     Camera,
 )
 from homeassistant.components.ffmpeg import CONF_EXTRA_ARGUMENTS, DATA_FFMPEG
@@ -102,9 +101,9 @@ class TapoCamEntity(Camera):
     @property
     def supported_features(self):
         if self._enable_stream:
-            return SUPPORT_STREAM | SUPPORT_ON_OFF
+            return CameraEntityFeature.STREAM | CameraEntityFeature.ON_OFF
         else:
-            return SUPPORT_ON_OFF
+            return CameraEntityFeature.ON_OFF
 
     @property
     def name(self) -> str:
@@ -197,11 +196,36 @@ class TapoCamEntity(Camera):
                 self._attr_extra_state_attributes[attr] = value
             self._attr_extra_state_attributes["alarm"] = camData["alarm"]
             self._attr_extra_state_attributes["user"] = camData["user"]
-            self._attr_extra_state_attributes["presets"] = camData["presets"]
             # Disable incorrect location report by camera
             self._attr_extra_state_attributes["longitude"] = 0
             self._attr_extra_state_attributes["latitude"] = 0
             self._attr_extra_state_attributes["has_set_location_info"] = 0
+            # lists below
+            self._attr_extra_state_attributes["presets"] = camData["presets"]
+            if camData["recordPlan"]:
+                self._attr_extra_state_attributes["record_plan"] = {
+                    "sunday": camData["recordPlan"]["sunday"]
+                    if "sunday" in camData["recordPlan"]
+                    else None,
+                    "monday": camData["recordPlan"]["monday"]
+                    if "monday" in camData["recordPlan"]
+                    else None,
+                    "tuesday": camData["recordPlan"]["tuesday"]
+                    if "tuesday" in camData["recordPlan"]
+                    else None,
+                    "wednesday": camData["recordPlan"]["wednesday"]
+                    if "wednesday" in camData["recordPlan"]
+                    else None,
+                    "thursday": camData["recordPlan"]["thursday"]
+                    if "thursday" in camData["recordPlan"]
+                    else None,
+                    "friday": camData["recordPlan"]["friday"]
+                    if "friday" in camData["recordPlan"]
+                    else None,
+                    "saturday": camData["recordPlan"]["saturday"]
+                    if "saturday" in camData["recordPlan"]
+                    else None,
+                }
 
     async def async_enable_motion_detection(self):
         await self.hass.async_add_executor_job(

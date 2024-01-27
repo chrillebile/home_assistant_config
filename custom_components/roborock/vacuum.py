@@ -8,6 +8,8 @@ from abc import ABC
 from typing import Any
 
 import voluptuous as vol
+from roborock.roborock_message import RoborockDataProtocol
+
 from homeassistant.components.vacuum import (
     ATTR_BATTERY_ICON,
     ATTR_FAN_SPEED,
@@ -31,7 +33,7 @@ from homeassistant.util import slugify
 from roborock import RoborockStateCode
 from roborock.roborock_typing import RoborockCommand
 
-from . import DomainData
+from . import EntryData
 from .const import DOMAIN
 from .coordinator import RoborockDataUpdateCoordinator
 from .device import RoborockCoordinatedEntity
@@ -190,12 +192,13 @@ async def async_setup_entry(
     """Set up the Roborock sensor."""
     add_services()
 
-    domain_data: DomainData = hass.data[DOMAIN][
+    domain_data: EntryData = hass.data[DOMAIN][
         config_entry.entry_id
     ]
 
     entities: list[RoborockVacuum] = []
-    for coordinator in domain_data.get("coordinators"):
+    for _device_id, device_entry_data in domain_data.get("devices").items():
+        coordinator = device_entry_data["coordinator"]
         unique_id = slugify(coordinator.data.device.duid)
         entities.append(RoborockVacuum(unique_id, coordinator.data, coordinator))
     async_add_entities(entities)
@@ -203,6 +206,8 @@ async def async_setup_entry(
 
 class RoborockVacuum(RoborockCoordinatedEntity, StateVacuumEntity, ABC):
     """General Representation of a Roborock vacuum."""
+
+    _attr_name = None
 
     def __init__(
         self,
@@ -216,6 +221,9 @@ class RoborockVacuum(RoborockCoordinatedEntity, StateVacuumEntity, ABC):
         self.manual_seqnum = 0
         self._device = device
         self._coordinator = coordinator
+        self.api.add_listener(RoborockDataProtocol.FAN_POWER, self._update_from_listener, self.api.cache)
+        self.api.add_listener(RoborockDataProtocol.STATE, self._update_from_listener, self.api.cache)
+
 
     @property
     def supported_features(self) -> VacuumEntityFeature:
@@ -344,15 +352,15 @@ class RoborockVacuum(RoborockCoordinatedEntity, StateVacuumEntity, ABC):
         capability_attributes[ATTR_MOP_INTENSITY_LIST] = self.mop_intensity_list
         return capability_attributes
 
-    def is_paused(self) -> bool:
-        """Return if the vacuum is paused."""
-        return self.state == STATE_PAUSED or self.state == STATE_ERROR
+    def is_paused_idle_or_error(self) -> bool:
+        """Return if the vacuum is in paused, idle or error state."""
+        return self.state == STATE_PAUSED or self.state == STATE_IDLE or self.state == STATE_ERROR
 
     async def async_start(self) -> None:
         """Start the vacuum."""
-        if self.is_paused() and self._device_status.in_cleaning == 2:
+        if self.is_paused_idle_or_error() and self._device_status.in_cleaning == 2:
             await self.send(RoborockCommand.RESUME_ZONED_CLEAN)
-        elif self.is_paused and self._device_status.in_cleaning == 3:
+        elif self.is_paused_idle_or_error() and self._device_status.in_cleaning == 3:
             await self.send(RoborockCommand.RESUME_SEGMENT_CLEAN)
         else:
             await self.send(RoborockCommand.APP_START)

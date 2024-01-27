@@ -183,10 +183,7 @@
       }
     },
     "binary_sensor": {
-      "mop_attached_1": {
-        "name": "Esfragão conectado"
-      },
-      "mop_attached_2": {
+      "mop_attached": {
         "name": "Esfragão conectado"
       },
       "water_box_attached": {
@@ -198,7 +195,7 @@
     },
     "select": {
       "mop_mode": {
-        "name": "Mode do esfregão",
+        "name": "Modo do esfregão",
         "state": {
           "standard": "Padrão",
           "deep": "Profundo",
@@ -213,7 +210,8 @@
           "mild": "Leve",
           "moderate": "Moderado",
           "intense": "Intenso",
-          "custom": "Customizado"
+          "custom": "Customizado",
+          "custom_water_flow": "Customizado"
         }
       }
     },
@@ -274,10 +272,10 @@
         "name": "Não perturbe fim"
       },
       "valley_electricity_start": {
-        "name": "Preço energia reduzido começo"
+        "name": "Carregamento fora de pico começo"
       },
       "valley_electricity_end": {
-        "name": "Preço energia reduzido fim"
+        "name": "Carregamento fora de pico fim"
       }
     },
     "switch": {

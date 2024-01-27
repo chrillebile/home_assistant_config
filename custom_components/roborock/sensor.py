@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+from roborock.roborock_message import RoborockDataProtocol
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -14,14 +16,14 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import AREA_SQUARE_METERS, UnitOfTime
+from homeassistant.const import AREA_SQUARE_METERS, PERCENTAGE, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util, slugify
 from roborock import DeviceProp
 
-from . import DomainData
+from . import EntryData
 from .const import DOMAIN
 from .coordinator import RoborockDataUpdateCoordinator
 from .device import RoborockCoordinatedEntity
@@ -53,6 +55,8 @@ ATTR_DOCK_DUST_COLLECTION_MODE = "dock_dust_collection_mode"
 ATTR_DOCK_MOP_WASH_MODE = "dock_mop_wash_mode"
 ATTR_SELECTED_MAP = "map_selected"
 ATTR_CURRENT_ROOM = "room"
+ATTR_MOP_DRYING_REMAINING_TIME = "rdt"
+ATTR_CLEANING_PROGRESS = "clean_percent"
 
 
 @dataclass
@@ -63,6 +67,7 @@ class RoborockSensorDescription(SensorEntityDescription):
     parent_key: str = None
     keys: list[str] = None
     value: Callable = None
+    protocol_listener: RoborockDataProtocol | None = None
 
 
 VACUUM_SENSORS = {
@@ -112,6 +117,7 @@ VACUUM_SENSORS = {
         attributes=("error_code",),
         parent_key="status",
         entity_category=EntityCategory.DIAGNOSTIC,
+        protocol_listener=RoborockDataProtocol.ERROR_CODE,
     ),
     f"current_{ATTR_STATUS_CLEAN_TIME}": RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -155,6 +161,7 @@ VACUUM_SENSORS = {
         name="Current room",
         translation_key="current_room",
         entity_category=EntityCategory.DIAGNOSTIC,
+        protocol_listener=RoborockDataProtocol.STATE,
     ),
     f"clean_history_{ATTR_CLEAN_SUMMARY_TOTAL_DURATION}": RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -205,6 +212,7 @@ VACUUM_SENSORS = {
         name="Main brush left",
         translation_key="main_brush_left",
         entity_category=EntityCategory.DIAGNOSTIC,
+        protocol_listener=RoborockDataProtocol.MAIN_BRUSH_WORK_TIME,
     ),
     f"consumable_{ATTR_CONSUMABLE_STATUS_SIDE_BRUSH_LEFT}": RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -215,6 +223,7 @@ VACUUM_SENSORS = {
         name="Side brush left",
         translation_key="side_brush_left",
         entity_category=EntityCategory.DIAGNOSTIC,
+        protocol_listener=RoborockDataProtocol.SIDE_BRUSH_WORK_TIME,
     ),
     f"consumable_{ATTR_CONSUMABLE_STATUS_FILTER_LEFT}": RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -225,6 +234,7 @@ VACUUM_SENSORS = {
         name="Filter left",
         translation_key="filter_left",
         entity_category=EntityCategory.DIAGNOSTIC,
+        protocol_listener=RoborockDataProtocol.FILTER_WORK_TIME,
     ),
     f"consumable_{ATTR_CONSUMABLE_STATUS_SENSOR_DIRTY_LEFT}": RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -242,6 +252,15 @@ VACUUM_SENSORS = {
         parent_key="status",
         name="Dock status",
         translation_key="dock_status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    f"current_{ATTR_CLEANING_PROGRESS}": RoborockSensorDescription(
+        native_unit_of_measurement=PERCENTAGE,
+        key="clean_percent",
+        icon="mdi:progress-check",
+        parent_key="status",
+        name="Cleaning progress",
+        translation_key="clean_percent",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
 }
@@ -274,6 +293,16 @@ VACUUM_WITH_DOCK_SENSORS = {
         translation_key="dock_mop_wash_mode_interval",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    f"current_{ATTR_MOP_DRYING_REMAINING_TIME}": RoborockSensorDescription(
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        key="rdt",
+        icon="mdi:timer-sand",
+        device_class=SensorDeviceClass.DURATION,
+        parent_key="status",
+        name="Mop drying remaining time",
+        translation_key="mop_drying_remaining_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 }
 
 
@@ -283,12 +312,13 @@ async def async_setup_entry(
         async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Roborock vacuum sensors."""
-    domain_data: DomainData = hass.data[DOMAIN][
+    domain_data: EntryData = hass.data[DOMAIN][
         config_entry.entry_id
     ]
 
     entities: list[RoborockSensor] = []
-    for coordinator in domain_data.get("coordinators"):
+    for _device_id, device_entry_data in domain_data.get("devices").items():
+        coordinator = device_entry_data["coordinator"]
         device_info = coordinator.data
         unique_id = slugify(device_info.device.duid)
         if device_info:
@@ -340,6 +370,9 @@ class RoborockSensor(RoborockCoordinatedEntity, SensorEntity):
         self._attr_extra_state_attributes = self._extract_attributes(
             coordinator.data.props
         )
+        if (protocol := self.entity_description.protocol_listener) is not None:
+            self.api.add_listener(protocol, self._update_from_listener, self.api.cache)
+
 
     @callback
     def _extract_attributes(self, data: DeviceProp):
